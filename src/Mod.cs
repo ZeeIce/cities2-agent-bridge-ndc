@@ -146,7 +146,10 @@ namespace CitiesIIAgentBridge
         private JObject Dispatch(string command, JObject args)
         {
             // These status polls must not terminate an active bounded simulation step.
-            bool statusOnly = command == "ping" || command == "get_capabilities" || command == "get_operation" || command == "get_batch" || command == "get_simulation_step";
+            bool statusOnly = command == "ping" || command == "get_capabilities" || command == "get_operation" || command == "get_batch" || command == "get_simulation_step"
+                // File-backed integration reads need neither a paused nor a loaded city.
+                || command == "integrations_status" || command == "roadbuilder_get_config" || command == "roadbuilder_validate_config"
+                || (command == "roadbuilder_list_configs" && (bool?)args["includeUsage"] != true);
             if(!statusOnly && command != "simulate_step" && command != "cancel_simulation_step" && command != "set_simulation_speed" && command != "set_camera")
             {
                 if(settings.AllowControl) PauseAnalysis();
@@ -171,19 +174,40 @@ namespace CitiesIIAgentBridge
                         ["terrainNaturalResources"] = true, ["terrainGroundwater"] = true,
                         ["terrainWaterSource"] = "full_precision_surface",
                         ["assetKinds"] = new JArray("building","network","zone","service","tree","prop","surface","other"),
-                        ["trafficLaneRules"] = false, ["buildingUseFullMetrics"] = false,
-                        ["roadBuilderConfiguration"] = false,
+                        ["trafficLaneRules"] = "read_only", ["trafficLaneRulesWrite"] = false,
+                        ["trafficModReadAdapter"] = TrafficAdapter.Available,
+                        ["buildingUtilization"] = true, ["buildingUseFullMetrics"] = false,
+                        ["roadBuilderConfiguration"] = RoadBuilderAdapter.Loaded ? "read_and_validate" : "files_only",
+                        ["roadBuilderApply"] = false,
                         ["dateMeaning"] = "Raw simulation DateTime; not the displayed game calendar"
                     },
                     ["relevantAssemblies"] = new JArray(AppDomain.CurrentDomain.GetAssemblies()
                         .Where(a => new[] { "Traffic", "BuildingUse", "RoadBuilder", "FindIt", "PlopTheGrowables", "CityPlanningDraft", "CitiesIIAgentBridge" }.Contains(a.GetName().Name))
                         .Select(a => new JObject { ["name"] = a.GetName().Name, ["version"] = a.GetName().Version.ToString(), ["status"] = "assembly_loaded_not_health_verified" })),
+                    ["buildings"] = new JArray("building_get_details", "building_query", "building_analyze_utilization"),
+                    ["traffic"] = new JArray("traffic_get_network", "traffic_get_intersection", "traffic_get_lane_rules", "traffic_find_bottlenecks", "traffic_analyze"),
+                    ["analysis"] = new JArray("city_get_zoning_summary", "city_analyze"),
+                    ["integrations"] = new JArray("integrations_status", "roadbuilder_list_configs", "roadbuilder_get_config", "roadbuilder_validate_config"),
                     ["planning"] = new JArray("get_district_atlas","get_city_map","get_city_diagnostics","find_building_sites","preview_building","plan_neighborhood","execute_neighborhood","get_neighborhood_plan"),
                     ["simulation"] = new JArray("pause_for_analysis","simulate_step","get_simulation_step","cancel_simulation_step","cancel_batch"),
                     ["analysisPausesGame"] = true,
                     ["construction"] = "native_preview_and_apply", ["controlEnabled"] = settings.AllowControl
                 };
                 case "get_city_state": return CityState();
+                case "building_get_details": return BuildingGetDetails(args);
+                case "building_query": return BuildingQuery(args);
+                case "building_analyze_utilization": return BuildingAnalyzeUtilization(args);
+                case "city_get_zoning_summary": return ZoningSummary(args);
+                case "city_analyze": return CityAnalyze(args);
+                case "traffic_get_network": return TrafficGetNetwork(args);
+                case "traffic_get_intersection": return TrafficGetIntersection(args);
+                case "traffic_get_lane_rules": return TrafficGetLaneRules(args);
+                case "traffic_find_bottlenecks": return TrafficFindBottlenecks(args);
+                case "traffic_analyze": return TrafficAnalyze(args);
+                case "integrations_status": return IntegrationsStatus();
+                case "roadbuilder_list_configs": return RoadBuilderListConfigs(args);
+                case "roadbuilder_get_config": return RoadBuilderGetConfig(args);
+                case "roadbuilder_validate_config": return RoadBuilderValidateConfig(args);
                 case "get_city_diagnostics": return Diagnostics(args);
                 case "get_city_map": return CityMap(args);
                 case "get_district_atlas": return DistrictAtlasPage(args);

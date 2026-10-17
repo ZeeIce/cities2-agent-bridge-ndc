@@ -10,6 +10,7 @@
     <Compile Include="../src/Mailbox.cs" /><Compile Include="Program.cs" />
     <Compile Include="../src/BridgeTick.cs" /><Compile Include="RecoveryTests.cs" />
     <Compile Include="MailboxClientTests.cs" />
+    <Compile Include="../src/TrafficMetrics.cs" /><Compile Include="../src/BuildingMetrics.cs" /><Compile Include="../src/Recommendation.cs" /><Compile Include="../src/AnalysisRules.cs" /><Compile Include="../src/RoadBuilderConfigs.cs" /><Compile Include="TelemetryTests.cs" />
     <Compile Include="../src/SimulationWindow.cs" /><Compile Include="../src/PlanGeometry.cs" /><Compile Include="PolicyTests.cs" />
     <Reference Include="Newtonsoft.Json"><HintPath>$(GamePath)\Cities2_Data\Managed\Newtonsoft.Json.dll</HintPath></Reference>
   </ItemGroup>

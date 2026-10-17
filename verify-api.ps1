@@ -41,6 +41,27 @@ try {
     $happiness=$assembly.MainModule.Types | Where-Object FullName -eq 'Game.Simulation.CitizenHappinessSystem'
     foreach($field in @('m_LastDeps','m_HappinessFactors')){if(!($happiness.Fields | Where-Object Name -eq $field)){throw "Happiness diagnostics contract changed: $field"}}
     Write-Output 'Rotation and happiness diagnostics native contracts verified.'
+    # 0.6.0 telemetry reads these members directly; a renamed field must fail here, not in-game.
+    $telemetry = [ordered]@{
+        'Game.Net.CarLane' = @('m_Flags','m_SpeedLimit'); 'Game.Net.EdgeLane' = @('m_EdgeDelta'); 'Game.Net.Lane' = @('m_StartNode','m_EndNode')
+        'Game.Net.Road' = @('m_TrafficFlowDuration0','m_TrafficFlowDistance0'); 'Game.Net.TrafficLights' = @('m_State','m_SignalGroupCount','m_CurrentSignalGroup')
+        'Game.Net.Upgraded' = @('m_Flags'); 'Game.Net.Composition' = @('m_Edge'); 'Game.Prefabs.NetCompositionData' = @('m_Width')
+        'Game.Prefabs.RoadData' = @('m_Flags'); 'Game.Prefabs.SchoolData' = @('m_StudentCapacity'); 'Game.Prefabs.HospitalData' = @('m_PatientCapacity')
+        'Game.Prefabs.BuildingPropertyData' = @('m_ResidentialProperties'); 'Game.Prefabs.SpawnableBuildingData' = @('m_Level'); 'Game.Prefabs.ConsumptionData' = @('m_Upkeep')
+        'Game.Prefabs.ZoneData' = @('m_ZoneType','m_AreaType'); 'Game.Buildings.BuildingCondition' = @('m_Condition'); 'Game.Buildings.PropertyRenter' = @('m_Rent')
+        'Game.Companies.WorkProvider' = @('m_MaxWorkers'); 'Game.Zones.Cell' = @('m_State','m_Zone'); 'Game.Zones.Block' = @('m_Position')
+    }
+    foreach ($name in $telemetry.Keys) {
+        $type = $assembly.MainModule.Types | Where-Object FullName -eq $name
+        if (!$type) { throw "Telemetry type missing: $name" }
+        foreach ($field in $telemetry[$name]) { if (!($type.Fields | Where-Object { $_.Name -eq $field -and $_.IsPublic })) { throw "Telemetry field missing: $name.$field" } }
+    }
+    $methods = @{ 'Game.Net.NetUtils' = 'GetTrafficFlowSpeed'; 'Game.Buildings.BuildingUtils' = 'GetEfficiency'; 'Game.Pathfind.PathNode' = 'GetOwnerIndex'; 'Game.Simulation.TrafficFlowSystem' = 'get_cityAverageTrafficFlow' }
+    foreach ($name in $methods.Keys) {
+        $type = $assembly.MainModule.Types | Where-Object FullName -eq $name
+        if (!$type -or !($type.Methods | Where-Object { $_.Name -eq $methods[$name] -and $_.IsPublic })) { throw "Telemetry method missing: $name.$($methods[$name])" }
+    }
+    Write-Output 'Building, zoning and traffic telemetry contracts verified.'
     $modSource = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'src\Mod.cs') -Raw
     $clientSource = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'bridge.ps1') -Raw
     $commands = @([regex]::Matches($modSource, 'case "([a-z_]+)":') | ForEach-Object { $_.Groups[1].Value })

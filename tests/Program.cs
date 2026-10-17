@@ -55,5 +55,6 @@ Console.WriteLine($"{DistrictTests.Run()} district census and assignment checks 
 Console.WriteLine($"{DistrictDrawingTests.Run()} district drawing geometry and preview checks passed.");
 Console.WriteLine($"{TerrainSampleTests.Run()} terrain sampling value and boundary checks passed.");
 Console.WriteLine($"{ObjectPlacementTests.Run()} object placement safety checks passed.");
+Console.WriteLine($"{TelemetryTests.Run()} telemetry, analysis and integration checks passed.");
 Console.WriteLine($"{RecoveryTests.Run()} mailbox recovery checks passed.");
 Console.WriteLine($"{MailboxClientTests.Run()} real PowerShell mailbox client checks passed.");
