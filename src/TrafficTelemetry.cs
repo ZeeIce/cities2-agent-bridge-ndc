@@ -227,7 +227,7 @@ namespace CitiesIIAgentBridge
                 ["vanilla"] = new JObject { ["nodeUpgrades"] = intersection["nodeUpgrades"], ["edgeUpgrades"] = new JArray(((JArray)intersection["edges"]).OfType<JObject>().Select(e => new JObject { ["edge"] = new JObject { ["index"] = e["index"], ["version"] = e["version"] }, ["upgrades"] = e["upgrades"] ?? new JArray() })), ["trafficLights"] = intersection["trafficLights"] },
                 ["realisedConnections"] = intersection["laneConnections"], ["movements"] = intersection["movements"],
                 ["trafficMod"] = TrafficModNodeData(w, node),
-                ["writeSupport"] = "read_only: no supported write path is implemented; see docs/IMPLEMENTATION-CHECKLIST.md",
+                ["writeSupport"] = "vanilla only: traffic_set_intersection_control and traffic_set_turn_restriction; Traffic-mod rules are read-only",
                 ["citySession"] = citySession
             };
         }

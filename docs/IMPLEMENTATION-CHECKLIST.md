@@ -32,7 +32,8 @@ A level is claimed only with evidence. Levels 5–6 require the rebuilt DLL to b
 | `city_analyze` + recommendation schema | ✔ | ✔ | ✔ | — | ✔ run 1 | ✔ run 1 | Rules tested against Fort Johnson figures measured live on 2026-10-17 |
 | Traffic mod read adapter | ✔ | ✔ | — | types checked by reflection offline | ✔ run 1 | ✔ run 1 | |
 | Road Builder list/get/validate | ✔ | ✔ | ✔ (all 51 installed configs parse) | — | list ✔ run 1 | list ✔ run 1 | |
-| Registry consistency (66 commands) | ✔ | ✔ | ✔ | ✔ | — | — | |
+| `traffic_set_intersection_control` / `traffic_set_turn_restriction` | ✔ | ✔ | — | ✔ (PlaceableNetData, Temp, leftHandTraffic) | ✗ | ✗ | Native upgrade tool; logic follows decompiled NetToolSystem.CreatePath/AddControlPoints |
+| Registry consistency (68 commands) | ✔ | ✔ | ✔ | ✔ | — | — | |
 | Install discovery (`find-game.ps1`) | ✔ | — | manual ✔ | — | — | — | Resolved `C:\Games\Cities - Skylines II` from `Player.log` |
 
 ## Blockers and deferred work (with evidence)
@@ -40,7 +41,7 @@ A level is claimed only with evidence. Levels 5–6 require the rebuilt DLL to b
 | Item | Status | Evidence / reason |
 |---|---|---|
 | Traffic mod rule writes (lane connections, priorities) | Blocked | The installed `Traffic.dll` exposes no public API (reflection: only `Traffic.Mod`, `ModSettings` and internal systems). Its rules are created through the mod's own tool, which writes `Temp`/definition entities processed by its systems. Writing its buffers directly would bypass its validation and serialization. A supported path would need an upstream API or a carefully driven instance of its tool. |
-| Vanilla turn restrictions / traffic lights / all-way stop (write) | Feasible, not started | `CompositionFlags.Side.ForbidLeftTurn/ForbidRightTurn/ForbidStraight` and `General.TrafficLights/RemoveTrafficLights/AllWayStop` are applied through the native net tool's upgrade mode. The existing `BridgeRoadTool` would need an upgrade-flags path, plus preview validation. |
+| Vanilla turn restrictions / traffic lights / all-way stop (write) | Implemented, awaiting live verification | `CompositionFlags.Side.ForbidLeftTurn/ForbidRightTurn/ForbidStraight` and `General.TrafficLights/RemoveTrafficLights/AllWayStop` are applied through the native net tool's upgrade mode. The existing `BridgeRoadTool` would need an upgrade-flags path, plus preview validation. |
 | Road Builder create/apply | Blocked | Road Builder generates prefabs from its own config objects (`RoadBuilderSystem`, `RoadBuilderSerializeSystem`). Writing new JSON files would only take effect on its next load and bypass its UI validation. There is no public apply API. |
 | Rule capture/restore across road replacement | Blocked on the two items above | Entity IDs change on replacement, so restoration needs re-identification by position plus lane index. This can be designed once a write path exists. |
 | CS2-Mod-Suite integration | Not applicable | Not installed in this environment. |

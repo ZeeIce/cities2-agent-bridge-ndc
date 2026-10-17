@@ -106,3 +106,38 @@ These work without a loaded city, except where noted.
 | `roadbuilder_validate_config` | `config` (RoadConfig object, request ≤16 KiB) | `valid`, `errors[]`, `warnings[]`, `summary`, `knownGroupPrefabs` |
 
 Road Builder direction is reported as its own `Invert` flag. Widths are summed from lane options and labelled as estimates.
+
+## Vanilla traffic controls (mutating; require bridge controls)
+
+These drive the game's own road-upgrade tool (`NetToolSystem`, Replace mode) exactly as the in-game upgrade brush does. Removal uses the tool's native remove-upgrade path. Both commands:
+
+- validate the preview before applying: no errors, nothing deleted, only the target node or edge and its directly connected network touched, and cost ≤ `maxCost`;
+- return an operation ID (poll with `get_operation`), or `changed: false` when the target is already in the requested state;
+- read the `Upgraded` flags back after applying, and fail with `upgrade_not_observed` if they don't match.
+
+Both are allowed in `batch_execute`. Changes are reversible with the opposite request. Entity IDs may change if the network is later rebuilt.
+
+### `traffic_set_intersection_control`
+| Input | Type | Notes |
+|---|---|---|
+| `index`, `version` | node | intersection with ≥3 road edges |
+| `control` | `traffic_lights` / `all_way_stop` / `default` | `default` removes whichever upgrade is present, leaving the game's automatic behaviour |
+| `previewOnly` | bool | validate without applying |
+| `maxCost` | int ≤ 1,000,000 | default 100,000 |
+
+Operation result: `target`, `flagsBefore`, `flagsPreview`, `flagsAfter`, `previewTouched`, `previewCost`, `applied`.
+
+### `traffic_set_turn_restriction`
+| Input | Type | Notes |
+|---|---|---|
+| `edgeIndex`, `edgeVersion` | road edge | the approach road |
+| `nodeIndex`, `nodeVersion` | node | the end of that road where the ban applies |
+| `movement` | `left` / `right` / `straight` | |
+| `forbid` | bool | true = add the ban, false = remove it |
+| `previewOnly`, `maxCost` | as above | |
+
+The ban is stored on the edge side that corresponds to the chosen end: start → left and end → right in right-hand traffic, swapped in left-hand traffic. The result reports `side`, and verification also checks that the opposite end did not change.
+
+```json
+{"command":"traffic_set_turn_restriction","args":{"edgeIndex":212264,"edgeVersion":1,"nodeIndex":199995,"nodeVersion":1,"movement":"left","forbid":true,"previewOnly":true}}
+```

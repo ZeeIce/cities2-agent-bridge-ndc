@@ -63,6 +63,8 @@
   "traffic_get_intersection",
   "traffic_get_lane_rules",
   "traffic_get_network",
+  "traffic_set_intersection_control",
+  "traffic_set_turn_restriction",
   "upgrade_network",
   "zone_rectangle"
 ]
