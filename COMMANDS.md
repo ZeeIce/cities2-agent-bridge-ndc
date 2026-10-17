@@ -1,5 +1,7 @@
 # Command reference — 0.5.0 community
 
+> 0.6.0-dev adds 14 read-only telemetry, analysis and integration commands. See [docs/TELEMETRY-COMMANDS.md](docs/TELEMETRY-COMMANDS.md); verification status is in [docs/IMPLEMENTATION-CHECKLIST.md](docs/IMPLEMENTATION-CHECKLIST.md).
+
 52 commands. Analysis pauses when controls are enabled; otherwise pause manually. Poll asynchronous operation IDs through completion.
 
 Known 0.5.0 issue: named district creation/editing can apply successfully and then report an EntityCommandBuffer naming-notification error. Inspect a fresh atlas and the operation result before any retry. Never replay an uncertain mutation. Boundary edits without a name have completed normally. See RELEASE-NOTES.md.

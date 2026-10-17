@@ -1,3 +1,13 @@
+# Development 0.6.0-dev — telemetry and analysis (unreleased)
+
+- Add building utilization telemetry: households, residents, employees, students and patients against capacity, level, condition, district, efficiency and rent.
+- Add traffic telemetry using the game's own flow ratio, lane counts and directions, realised turning movements, signals and turn-restriction upgrades.
+- Add bottleneck ranking, road-hierarchy gap detection and schema-checked city recommendations (`city_analyze`).
+- Add read-only Traffic-mod and Road Builder adapters; Road Builder configs can be listed, inspected and validated.
+- Release a wedged save lock after 180 s instead of blocking every later checkpoint.
+- Discover the game installation from `Player.log`; no Steam path is assumed.
+- Not yet verified in the running game; see docs/IMPLEMENTATION-CHECKLIST.md.
+
 # Community preview 0.5.0 — district atlas and controls
 
 - Add district census by home location, age/education groups, road curves, building footprints, service capacities and assignments.
