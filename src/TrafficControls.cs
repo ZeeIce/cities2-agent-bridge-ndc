@@ -96,15 +96,14 @@ namespace CitiesIIAgentBridge
             return deps;
         }
 
-        // The preview must touch only the requested node/edge (and the edges of a requested node,
-        // whose node geometry is regenerated), must not delete anything and must fit the budget.
+        // The game regenerates geometry around an upgraded node or edge, so the preview legitimately
+        // contains neighbouring network entities (a neighbourhood whitelist rejected every real
+        // upgrade in live test 3). The safety property enforced instead: nothing is deleted, no new
+        // network is created, and no entity other than the target changes its Upgraded flags.
         private void InspectPreview()
         {
-            var allowed = new HashSet<Entity> { target };
-            if (EntityManager.HasBuffer<ConnectedEdge>(target))
-                foreach (var c in EntityManager.GetBuffer<ConnectedEdge>(target, true)) allowed.Add(c.m_Edge);
-            if (EntityManager.HasComponent<Edge>(target)) { var edge = EntityManager.GetComponentData<Edge>(target); allowed.Add(edge.m_Start); allowed.Add(edge.m_End); }
-            int cost = 0; bool targetSeen = false; var touched = new JArray();
+            int cost = 0; bool targetSeen = false; string violation = null; var touched = new JArray(); int touchedTotal = 0;
+            var result = ConstructionAccess.Results[operation];
             using (var q = EntityManager.CreateEntityQuery(ComponentType.ReadOnly<Temp>()))
             using (var es = q.ToEntityArray(Allocator.Temp))
                 foreach (var e in es)
@@ -112,20 +111,35 @@ namespace CitiesIIAgentBridge
                     var t = EntityManager.GetComponentData<Temp>(e);
                     if ((t.m_Flags & TempFlags.Cancel) != 0) continue;
                     cost = checked(cost + Math.Max(0, t.m_Cost));
-                    if (t.m_Original == Entity.Null) continue;
+                    bool tempIsNetwork = EntityManager.HasComponent<Edge>(e) || EntityManager.HasComponent<Game.Net.Node>(e);
+                    if (t.m_Original == Entity.Null)
+                    {
+                        // Owned helper objects (props, lanes) may be generated; a new top-level edge or node may not.
+                        if (tempIsNetwork && !EntityManager.HasComponent<Owner>(e) && (t.m_Flags & TempFlags.Create) != 0) violation ??= "upgrade_preview_would_create_network";
+                        continue;
+                    }
                     bool network = EntityManager.HasComponent<Edge>(t.m_Original) || EntityManager.HasComponent<Game.Net.Node>(t.m_Original);
                     if (!network) continue;
-                    if ((t.m_Flags & TempFlags.Delete) != 0) throw new InvalidOperationException("upgrade_preview_would_delete_network");
-                    if (!allowed.Contains(t.m_Original)) throw new InvalidOperationException("upgrade_preview_touches_unexpected_entity");
+                    var before = CurrentFlags(EntityManager, t.m_Original);
+                    var after = EntityManager.HasComponent<Upgraded>(e) ? EntityManager.GetComponentData<Upgraded>(e).m_Flags : before;
+                    bool flagsChange = !after.Equals(before);
+                    ++touchedTotal;
+                    if (touched.Count < 32)
+                    {
+                        var row = NativeBuild.Id(t.m_Original); row["tempFlags"] = t.m_Flags.ToString();
+                        row["kind"] = EntityManager.HasComponent<Edge>(t.m_Original) ? "edge" : "node";
+                        row["upgradedChanges"] = flagsChange; if (flagsChange) row["flagsPreview"] = FlagsJson(after);
+                        touched.Add(row);
+                    }
+                    if ((t.m_Flags & TempFlags.Delete) != 0) violation ??= "upgrade_preview_would_delete_network";
                     if (t.m_Original == target)
                     {
-                        targetSeen = true;
-                        if (EntityManager.HasComponent<Upgraded>(e)) ConstructionAccess.Results[operation]["flagsPreview"] = FlagsJson(EntityManager.GetComponentData<Upgraded>(e).m_Flags);
+                        targetSeen = true; result["flagsPreview"] = FlagsJson(after);
                     }
-                    if (touched.Count < 16) { var row = NativeBuild.Id(t.m_Original); row["tempFlags"] = t.m_Flags.ToString(); touched.Add(row); }
+                    else if (flagsChange) violation ??= "upgrade_preview_changes_another_entity: " + t.m_Original.Index + ":" + t.m_Original.Version;
                 }
-            ConstructionAccess.Results[operation]["previewTouched"] = touched;
-            ConstructionAccess.Results[operation]["previewCost"] = cost;
+            result["previewTouched"] = touched; result["previewTouchedTotal"] = touchedTotal; result["previewCost"] = cost;
+            if (violation != null) throw new InvalidOperationException(violation);
             if (!targetSeen) throw new InvalidOperationException("target_not_in_upgrade_preview");
             if (cost > maxCost || cost > World.GetExistingSystemManaged<CitySystem>().moneyAmount) throw new InvalidOperationException("cost_exceeds_budget");
         }
