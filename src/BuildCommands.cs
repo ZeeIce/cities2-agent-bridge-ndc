@@ -30,7 +30,7 @@ namespace CitiesIIAgentBridge
                 if (kind == "other" && category != "all" && category != "other") continue;
                 if (category != "" && category != "all" && !kind.Equals(category, StringComparison.OrdinalIgnoreCase)) continue;
                 if (p.name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) < 0) continue;
-                if (page.Contains(total++)) rows.Add(new JObject { ["index"] = e.Index, ["version"] = e.Version, ["name"] = p.name, ["kind"] = kind, ["prefabType"] = p.GetType().FullName, ["locked"] = IsPrefabLocked(em, e), ["bridgePlacementSupported"] = p is BuildingPrefab || p is NetPrefab || p is ZonePrefab });
+                if (page.Contains(total++)) rows.Add(new JObject { ["index"] = e.Index, ["version"] = e.Version, ["name"] = p.name, ["kind"] = kind, ["prefabType"] = p.GetType().FullName, ["locked"] = IsPrefabLocked(em, e), ["bridgePlacementSupported"] = p is BuildingPrefab || p is NetPrefab || p is ZonePrefab || p is AssetStampPrefab || (em.HasComponent<NetObjectData>(e) && em.HasComponent<PlaceableObjectData>(e) && (em.GetComponentData<PlaceableObjectData>(e).m_Flags & Game.Objects.PlacementFlags.RoadNode) != 0) });
             }
             var result = page.Result("prefabs", rows, total); result["citySession"] = citySession; return result;
         }

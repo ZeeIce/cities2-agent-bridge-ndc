@@ -41,6 +41,7 @@
   "integrations_status",
   "pause_for_analysis",
   "ping",
+  "place_asset_stamp",
   "place_building",
   "plan_neighborhood",
   "preview_building",

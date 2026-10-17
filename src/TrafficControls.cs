@@ -278,6 +278,26 @@ namespace CitiesIIAgentBridge
             return ConstructionAccess.Status(ConstructionAccess.Active);
         }
 
+        // Places one of the game's prebuilt intersection/interchange asset stamps through the native
+        // object tool (Stamp mode). Large stamps cost more than ordinary placements, hence the higher cap.
+        private JObject PlaceAssetStamp(JObject args)
+        {
+            var w = RequireCity(); RequireControl(); CheckBuildTool(w); var em = w.EntityManager;
+            var prefabEntity = new Entity { Index = RequiredInt(args, "prefabIndex"), Version = RequiredInt(args, "prefabVersion") };
+            if (!em.Exists(prefabEntity) || IsPrefabLocked(em, prefabEntity)) throw new ArgumentException("prefab_stale_or_locked");
+            if (!w.GetExistingSystemManaged<PrefabSystem>().TryGetPrefab<AssetStampPrefab>(prefabEntity, out var stamp)) throw new ArgumentException("prefab_is_not_an_asset_stamp");
+            var point = BuildPoint(w, args["position"] as JObject);
+            float rotation = args["rotation"] == null ? 0 : RequiredFloat(args, "rotation");
+            point.m_Rotation = quaternion.RotateY(math.radians(rotation));
+            int budget = args["maxCost"] == null ? 2000000 : RequiredInt(args, "maxCost"); if (budget < 0 || budget > 20000000) throw new ArgumentException("invalid_budget");
+            float snap = args["maxSnapDistance"] == null ? 64 : RequiredFloat(args, "maxSnapDistance");
+            if (snap < 0 || snap > 256) throw new ArgumentException("maxSnapDistance_must_be_0_to_256");
+            w.GetExistingSystemManaged<BridgeObjectTool>().BeginStamp(stamp, point, budget, (bool?)args["previewOnly"] == true, (bool?)args["allowDemolition"] == true, snap);
+            var status = ConstructionAccess.Status(ConstructionAccess.Active);
+            if (em.HasComponent<AssetStampData>(prefabEntity)) status["stampSizeCells"] = new JArray(em.GetComponentData<AssetStampData>(prefabEntity).m_Size.x, em.GetComponentData<AssetStampData>(prefabEntity).m_Size.y);
+            return status;
+        }
+
         private static JObject Unchanged(Entity target, string requested) => new JObject
         {
             ["status"] = "complete", ["changed"] = false, ["requested"] = requested, ["target"] = NativeBuild.Id(target),

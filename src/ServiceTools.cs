@@ -49,6 +49,15 @@ namespace CitiesIIAgentBridge
         private float maxSnapDistance;
         // Set for net objects placed onto an intersection node (roundabouts) instead of buildings.
         private Entity nodeTarget;
+        // Set for asset stamps (prebuilt intersections/interchanges); the object tool resolves
+        // Create to its own Stamp mode for Stampable prefabs.
+        private bool stampMode; private HashSet<Entity> roadsBefore;
+        public void BeginStamp(ObjectPrefab stamp, ControlPoint p, int maxCost, bool preview, bool demolish, float snapDistance)
+        {
+            Begin(stamp, p, maxCost, Entity.Null, preview, null, demolish, snapDistance);
+            stampMode = true; roadsBefore = ConstructionAccess.Roads(EntityManager);
+            ConstructionAccess.Results[operation]["kind"] = "asset_stamp";
+        }
         public void BeginNodeObject(ObjectPrefab netObject, ControlPoint p, int maxCost, Entity node, bool preview, bool demolish)
         {
             Begin(netObject, p, maxCost, Entity.Null, preview, null, demolish, 4);
@@ -56,7 +65,7 @@ namespace CitiesIIAgentBridge
         }
         public void Begin(ObjectPrefab building, ControlPoint p, int maxCost, Entity move, bool preview = false, ControlPoint[] alternatives = null, bool demolish = false, float snapDistance = 32)
         {
-            nodeTarget = Entity.Null;
+            nodeTarget = Entity.Null; stampMode = false; roadsBefore = null;
             var requestedPrefab = World.GetExistingSystemManaged<PrefabSystem>().GetEntity(building);
             if (move != Entity.Null && (!EntityManager.HasComponent<PrefabRef>(move) || EntityManager.GetComponentData<PrefabRef>(move).m_Prefab != requestedPrefab))
                 throw new InvalidOperationException("relocation_prefab_mismatch");
@@ -124,7 +133,7 @@ namespace CitiesIIAgentBridge
                             if(t.m_Original!=Entity.Null && t.m_Original!=moved && (t.m_Flags&TempFlags.Delete)!=0 && EntityManager.HasComponent<Game.Buildings.Building>(t.m_Original))
                                 throw new InvalidOperationException("would_demolish_existing_building");
                     }
-                    if (nodeTarget == Entity.Null) ValidateBuildingPreview(); else ValidateNodeObjectPreview();
+                    if (stampMode) ValidateStampPreview(); else if (nodeTarget == Entity.Null) ValidateBuildingPreview(); else ValidateNodeObjectPreview();
                     ConstructionAccess.Results[operation]["previewCost"] = NativeBuild.Cost(World, budget);
                     ConstructionAccess.Results[operation]["snappedPosition"] = new JObject{["x"]=point.m_Position.x,["y"]=point.m_Position.y,["z"]=point.m_Position.z};
                     ConstructionAccess.Results[operation]["snappedRotation"] = new JArray(point.m_Rotation.value.x,point.m_Rotation.value.y,point.m_Rotation.value.z,point.m_Rotation.value.w);
@@ -138,6 +147,15 @@ namespace CitiesIIAgentBridge
                     if (!before.Contains(e) && EntityManager.HasComponent<PrefabRef>(e) && EntityManager.GetComponentData<PrefabRef>(e).m_Prefab == expectedPrefab && EntityManager.HasComponent<Game.Objects.Transform>(e) && math.distance(EntityManager.GetComponentData<Game.Objects.Transform>(e).m_Position,point.m_Position)<8)
                     { var row=NativeBuild.Id(e); row["roadEdge"]=NativeBuild.Id(EntityManager.GetComponentData<Game.Buildings.Building>(e).m_RoadEdge); created.Add(row); }
                 ConstructionAccess.Results[operation]["createdBuildings"] = created;
+                if (stampMode)
+                {
+                    var createdEdges = new JArray(); int count = 0;
+                    foreach (var r in ConstructionAccess.Roads(EntityManager))
+                        if (!roadsBefore.Contains(r)) { if (createdEdges.Count < 128) { var row = NativeBuild.Id(r); if (EntityManager.HasComponent<PrefabRef>(r)) row["prefab"] = World.GetExistingSystemManaged<PrefabSystem>().GetPrefabName(EntityManager.GetComponentData<PrefabRef>(r).m_Prefab); createdEdges.Add(row); } ++count; }
+                    ConstructionAccess.Results[operation]["createdEdges"] = createdEdges; ConstructionAccess.Results[operation]["createdEdgeCount"] = count;
+                    if (count == 0) throw new InvalidOperationException("stamp_network_not_observed");
+                    Finish("complete"); return deps;
+                }
                 if (nodeTarget != Entity.Null)
                 {
                     if (!EntityManager.Exists(nodeTarget)) throw new InvalidOperationException("node_replaced_inspect_before_retrying");
@@ -202,6 +220,28 @@ namespace CitiesIIAgentBridge
             }
             ConstructionAccess.Results[operation]["previewTouched"] = touched;
             if (!nodeSeen) throw new InvalidOperationException("target_node_not_in_preview");
+        }
+        // A stamp must generate road network; it may modify existing roads it connects to, but may
+        // delete existing network or buildings only when demolition was explicitly allowed.
+        private void ValidateStampPreview()
+        {
+            int newNetwork = 0, modified = 0, deleted = 0; var touched = new JArray();
+            using (var q = EntityManager.CreateEntityQuery(ComponentType.ReadOnly<Temp>()))
+            using (var es = q.ToEntityArray(Allocator.Temp)) foreach (var e in es)
+            {
+                var t = EntityManager.GetComponentData<Temp>(e);
+                if ((t.m_Flags & TempFlags.Cancel) != 0) continue;
+                bool tempNetwork = EntityManager.HasComponent<Game.Net.Edge>(e) || EntityManager.HasComponent<Game.Net.Node>(e);
+                if (t.m_Original == Entity.Null) { if (tempNetwork) ++newNetwork; continue; }
+                bool network = EntityManager.HasComponent<Game.Net.Edge>(t.m_Original) || EntityManager.HasComponent<Game.Net.Node>(t.m_Original);
+                if (!network) continue;
+                if ((t.m_Flags & TempFlags.Delete) != 0) { ++deleted; if (!allowDemolition) throw new InvalidOperationException("stamp_would_delete_existing_network"); }
+                else ++modified;
+                if (touched.Count < 32) { var row = NativeBuild.Id(t.m_Original); row["tempFlags"] = t.m_Flags.ToString(); touched.Add(row); }
+            }
+            var result = ConstructionAccess.Results[operation];
+            result["previewNewNetwork"] = newNetwork; result["previewModifiedNetwork"] = modified; result["previewDeletedNetwork"] = deleted; result["previewTouched"] = touched;
+            if (newNetwork == 0) throw new InvalidOperationException("stamp_preview_generated_no_network");
         }
         private bool RetryCandidate(string error,JArray errors)
         {
