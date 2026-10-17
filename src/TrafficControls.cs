@@ -255,6 +255,29 @@ namespace CitiesIIAgentBridge
             return status;
         }
 
+        // Places one of the game's own intersection net objects (roundabouts) onto a node through
+        // the native object tool, exactly as the Roads > Intersections menu does.
+        private JObject PlaceRoundabout(JObject args)
+        {
+            var w = RequireCity(); RequireControl(); CheckBuildTool(w); var em = w.EntityManager;
+            var node = new Entity { Index = RequiredInt(args, "nodeIndex"), Version = RequiredInt(args, "nodeVersion") };
+            if (!em.Exists(node) || !em.HasComponent<Game.Net.Node>(node) || em.HasComponent<Temp>(node)) throw new ArgumentException("live_network_node_required");
+            if (em.HasComponent<Game.Net.Roundabout>(node)) return Unchanged(node, "roundabout");
+            int roads = em.HasBuffer<ConnectedEdge>(node) ? em.GetBuffer<ConnectedEdge>(node, true).ToNativeArray(Allocator.Temp).ToArray().Count(c => em.HasComponent<Road>(c.m_Edge)) : 0;
+            if (roads < 3) throw new ArgumentException("roundabouts_need_3_or_more_road_edges");
+            var prefabEntity = new Entity { Index = RequiredInt(args, "prefabIndex"), Version = RequiredInt(args, "prefabVersion") };
+            if (!em.Exists(prefabEntity) || IsPrefabLocked(em, prefabEntity)) throw new ArgumentException("prefab_stale_or_locked");
+            if (!em.HasComponent<NetObjectData>(prefabEntity) || !em.HasComponent<PlaceableObjectData>(prefabEntity) ||
+                (em.GetComponentData<PlaceableObjectData>(prefabEntity).m_Flags & Game.Objects.PlacementFlags.RoadNode) == 0)
+                throw new ArgumentException("prefab_is_not_a_node_intersection_object");
+            if (!w.GetExistingSystemManaged<PrefabSystem>().TryGetPrefab<ObjectPrefab>(prefabEntity, out var prefab)) throw new ArgumentException("incorrect_prefab_type");
+            int budget = args["maxCost"] == null ? 200000 : RequiredInt(args, "maxCost"); if (budget < 0 || budget > 1000000) throw new ArgumentException("invalid_budget");
+            var position = em.GetComponentData<Game.Net.Node>(node).m_Position;
+            var point = new ControlPoint { m_OriginalEntity = node, m_Position = position, m_HitPosition = position, m_Rotation = quaternion.identity };
+            w.GetExistingSystemManaged<BridgeObjectTool>().BeginNodeObject(prefab, point, budget, node, (bool?)args["previewOnly"] == true, (bool?)args["allowDemolition"] == true);
+            return ConstructionAccess.Status(ConstructionAccess.Active);
+        }
+
         private static JObject Unchanged(Entity target, string requested) => new JObject
         {
             ["status"] = "complete", ["changed"] = false, ["requested"] = requested, ["target"] = NativeBuild.Id(target),

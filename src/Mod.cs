@@ -165,7 +165,7 @@ namespace CitiesIIAgentBridge
                 case "get_capabilities": return new JObject
                 {
                     ["read"] = new JArray("ping", "get_capabilities", "get_city_state", "get_camera", "get_selected", "inspect_entity", "get_water_facilities"),
-                    ["control"] = new JArray("create_district","edit_district","set_service_districts","set_camera", "set_simulation_speed", "build_road", "build_network", "upgrade_network", "zone_rectangle", "clear_zoning", "place_building", "relocate_building", "demolish", "purchase_tiles", "set_tax", "set_service_budget", "save_checkpoint", "batch_execute", "traffic_set_intersection_control", "traffic_set_turn_restriction"),
+                    ["control"] = new JArray("create_district","edit_district","set_service_districts","set_camera", "set_simulation_speed", "build_road", "build_network", "upgrade_network", "zone_rectangle", "clear_zoning", "place_building", "relocate_building", "demolish", "purchase_tiles", "set_tax", "set_service_budget", "save_checkpoint", "batch_execute", "traffic_set_intersection_control", "traffic_set_turn_restriction", "traffic_place_roundabout"),
                     ["constructionQueries"] = new JArray("get_build_prefabs", "get_prefab_details", "get_network", "get_network_edges", "trace_network", "get_zone_cells", "get_operation", "get_batch", "get_city_management", "get_services", "sample_terrain", "get_tiles", "get_buildings", "diagnose_connections"),
                     ["buildVersion"] = ModVersion, ["liveValidation"] = "community_binary_requires_live_validation",
                     ["visibility"] = new JObject {
@@ -207,6 +207,7 @@ namespace CitiesIIAgentBridge
                 case "traffic_analyze": return TrafficAnalyze(args);
                 case "traffic_set_intersection_control": return SetIntersectionControl(args);
                 case "traffic_set_turn_restriction": return SetTurnRestriction(args);
+                case "traffic_place_roundabout": return PlaceRoundabout(args);
                 case "integrations_status": return IntegrationsStatus();
                 case "roadbuilder_list_configs": return RoadBuilderListConfigs(args);
                 case "roadbuilder_get_config": return RoadBuilderGetConfig(args);

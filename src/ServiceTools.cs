@@ -47,8 +47,16 @@ namespace CitiesIIAgentBridge
         private int candidateIndex;
         private bool previewOnly, allowDemolition, applied;
         private float maxSnapDistance;
+        // Set for net objects placed onto an intersection node (roundabouts) instead of buildings.
+        private Entity nodeTarget;
+        public void BeginNodeObject(ObjectPrefab netObject, ControlPoint p, int maxCost, Entity node, bool preview, bool demolish)
+        {
+            Begin(netObject, p, maxCost, Entity.Null, preview, null, demolish, 4);
+            nodeTarget = node; ConstructionAccess.Results[operation]["kind"] = "node_object"; ConstructionAccess.Results[operation]["node"] = NativeBuild.Id(node);
+        }
         public void Begin(ObjectPrefab building, ControlPoint p, int maxCost, Entity move, bool preview = false, ControlPoint[] alternatives = null, bool demolish = false, float snapDistance = 32)
         {
+            nodeTarget = Entity.Null;
             var requestedPrefab = World.GetExistingSystemManaged<PrefabSystem>().GetEntity(building);
             if (move != Entity.Null && (!EntityManager.HasComponent<PrefabRef>(move) || EntityManager.GetComponentData<PrefabRef>(move).m_Prefab != requestedPrefab))
                 throw new InvalidOperationException("relocation_prefab_mismatch");
@@ -116,7 +124,7 @@ namespace CitiesIIAgentBridge
                             if(t.m_Original!=Entity.Null && t.m_Original!=moved && (t.m_Flags&TempFlags.Delete)!=0 && EntityManager.HasComponent<Game.Buildings.Building>(t.m_Original))
                                 throw new InvalidOperationException("would_demolish_existing_building");
                     }
-                    ValidateBuildingPreview();
+                    if (nodeTarget == Entity.Null) ValidateBuildingPreview(); else ValidateNodeObjectPreview();
                     ConstructionAccess.Results[operation]["previewCost"] = NativeBuild.Cost(World, budget);
                     ConstructionAccess.Results[operation]["snappedPosition"] = new JObject{["x"]=point.m_Position.x,["y"]=point.m_Position.y,["z"]=point.m_Position.z};
                     ConstructionAccess.Results[operation]["snappedRotation"] = new JArray(point.m_Rotation.value.x,point.m_Rotation.value.y,point.m_Rotation.value.z,point.m_Rotation.value.w);
@@ -130,6 +138,15 @@ namespace CitiesIIAgentBridge
                     if (!before.Contains(e) && EntityManager.HasComponent<PrefabRef>(e) && EntityManager.GetComponentData<PrefabRef>(e).m_Prefab == expectedPrefab && EntityManager.HasComponent<Game.Objects.Transform>(e) && math.distance(EntityManager.GetComponentData<Game.Objects.Transform>(e).m_Position,point.m_Position)<8)
                     { var row=NativeBuild.Id(e); row["roadEdge"]=NativeBuild.Id(EntityManager.GetComponentData<Game.Buildings.Building>(e).m_RoadEdge); created.Add(row); }
                 ConstructionAccess.Results[operation]["createdBuildings"] = created;
+                if (nodeTarget != Entity.Null)
+                {
+                    if (!EntityManager.Exists(nodeTarget)) throw new InvalidOperationException("node_replaced_inspect_before_retrying");
+                    bool roundabout = EntityManager.HasComponent<Game.Net.Roundabout>(nodeTarget);
+                    ConstructionAccess.Results[operation]["roundabout"] = roundabout;
+                    if (roundabout) ConstructionAccess.Results[operation]["radius"] = EntityManager.GetComponentData<Game.Net.Roundabout>(nodeTarget).m_Radius;
+                    if (!roundabout) throw new InvalidOperationException("node_object_not_observed");
+                    Finish("complete"); return deps;
+                }
                 bool movedSuccessfully = moved != Entity.Null && EntityManager.Exists(moved) && EntityManager.HasComponent<PrefabRef>(moved) && EntityManager.GetComponentData<PrefabRef>(moved).m_Prefab == expectedPrefab && EntityManager.HasComponent<Game.Objects.Transform>(moved) && Unity.Mathematics.math.distance(EntityManager.GetComponentData<Game.Objects.Transform>(moved).m_Position, point.m_Position) < 16;
                 if (created.Count == 0 && !movedSuccessfully) throw new InvalidOperationException("building_change_not_observed");
                 Finish("complete");
@@ -166,6 +183,25 @@ namespace CitiesIIAgentBridge
             result["previewBuildings"] = roots;
             var error = BuildingPreviewSafety.Validate(entries, moved != Entity.Null, allowDemolition);
             if (error != null) throw new InvalidOperationException(error);
+        }
+        // Building demolition is already refused above unless allowed; a node object must also
+        // never delete road network, and the preview must actually involve the target node.
+        private void ValidateNodeObjectPreview()
+        {
+            bool nodeSeen = false; var touched = new JArray();
+            using (var q = EntityManager.CreateEntityQuery(ComponentType.ReadOnly<Temp>()))
+            using (var es = q.ToEntityArray(Allocator.Temp)) foreach (var e in es)
+            {
+                var t = EntityManager.GetComponentData<Temp>(e);
+                if ((t.m_Flags & TempFlags.Cancel) != 0 || t.m_Original == Entity.Null) continue;
+                bool network = EntityManager.HasComponent<Game.Net.Edge>(t.m_Original) || EntityManager.HasComponent<Game.Net.Node>(t.m_Original);
+                if (!network) continue;
+                if ((t.m_Flags & TempFlags.Delete) != 0) throw new InvalidOperationException("node_object_would_delete_network");
+                if (t.m_Original == nodeTarget) nodeSeen = true;
+                if (touched.Count < 32) { var row = NativeBuild.Id(t.m_Original); row["tempFlags"] = t.m_Flags.ToString(); touched.Add(row); }
+            }
+            ConstructionAccess.Results[operation]["previewTouched"] = touched;
+            if (!nodeSeen) throw new InvalidOperationException("target_node_not_in_preview");
         }
         private bool RetryCandidate(string error,JArray errors)
         {

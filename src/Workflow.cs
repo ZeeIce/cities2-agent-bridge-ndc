@@ -27,7 +27,7 @@ namespace CitiesIIAgentBridge
         private bool dispatchingBatch;
         private long batchStartMoney, batchReserve;
         private DateTime batchDeadline;
-        private static readonly string[] batchCommands = { "build_road", "build_network", "upgrade_network", "purchase_tiles", "zone_rectangle", "clear_zoning", "place_building", "relocate_building", "demolish", "set_tax", "set_service_budget", "save_checkpoint", "set_simulation_speed", "traffic_set_intersection_control", "traffic_set_turn_restriction" };
+        private static readonly string[] batchCommands = { "build_road", "build_network", "upgrade_network", "purchase_tiles", "zone_rectangle", "clear_zoning", "place_building", "relocate_building", "demolish", "set_tax", "set_service_budget", "save_checkpoint", "set_simulation_speed", "traffic_set_intersection_control", "traffic_set_turn_restriction", "traffic_place_roundabout" };
 
         private JObject SaveCheckpoint(JObject args)
         {

@@ -50,7 +50,7 @@ try {
         'Game.Prefabs.RoadData' = @('m_Flags'); 'Game.Prefabs.SchoolData' = @('m_StudentCapacity'); 'Game.Prefabs.HospitalData' = @('m_PatientCapacity')
         'Game.Prefabs.BuildingPropertyData' = @('m_ResidentialProperties'); 'Game.Prefabs.SpawnableBuildingData' = @('m_Level'); 'Game.Prefabs.ConsumptionData' = @('m_Upkeep')
         'Game.Prefabs.ZoneData' = @('m_ZoneType','m_AreaType'); 'Game.Buildings.BuildingCondition' = @('m_Condition'); 'Game.Buildings.PropertyRenter' = @('m_Rent')
-        'Game.Companies.WorkProvider' = @('m_MaxWorkers'); 'Game.Prefabs.PlaceableNetData' = @('m_PlacementFlags','m_SetUpgradeFlags','m_UnsetUpgradeFlags'); 'Game.Tools.Temp' = @('m_Original','m_Flags','m_Cost'); 'Game.Zones.Cell' = @('m_State','m_Zone'); 'Game.Zones.Block' = @('m_Position')
+        'Game.Companies.WorkProvider' = @('m_MaxWorkers'); 'Game.Prefabs.PlaceableNetData' = @('m_PlacementFlags','m_SetUpgradeFlags','m_UnsetUpgradeFlags'); 'Game.Tools.Temp' = @('m_Original','m_Flags','m_Cost'); 'Game.Net.Roundabout' = @('m_Radius'); 'Game.Net.Elevation' = @('m_Elevation'); 'Game.Prefabs.NetObjectData' = @('m_CompositionFlags'); 'Game.Zones.Cell' = @('m_State','m_Zone'); 'Game.Zones.Block' = @('m_Position')
     }
     foreach ($name in $telemetry.Keys) {
         $type = $assembly.MainModule.Types | Where-Object FullName -eq $name
