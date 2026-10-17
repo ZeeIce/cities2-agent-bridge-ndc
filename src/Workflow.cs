@@ -15,6 +15,10 @@ namespace CitiesIIAgentBridge
     {
         private Task<bool> saveTask;
         private string saveOperation;
+        private DateTime saveDeadline;
+        // A save task that never completes (observed after a city reload) must not block every
+        // later checkpoint. The task itself cannot be cancelled; it is abandoned and reported.
+        internal const int SaveTimeoutSeconds = 180;
         private RenderTexture savePreview;
         private JObject batch;
         private JArray batchSteps;
@@ -39,6 +43,7 @@ namespace CitiesIIAgentBridge
                 ScreenCaptureHelper.CaptureScreenshot(UnityEngine.Camera.main, savePreview, new MenuHelpers.SaveGamePreviewSettings());
                 var info = world.GetExistingSystemManaged<MenuUISystem>().GetSaveInfo(autoSave: false);
                 saveTask = GameManager.instance.Save(name, info, AssetDatabase.user, savePreview);
+                saveDeadline = DateTime.UtcNow.AddSeconds(SaveTimeoutSeconds);
                 ConstructionAccess.Results[saveOperation]["saveName"] = name;
                 return ConstructionAccess.Status(saveOperation);
             }
@@ -95,6 +100,13 @@ namespace CitiesIIAgentBridge
                 ConstructionAccess.Finish(saveOperation, success ? "complete" : "failed", success ? null : saveTask.Exception?.GetBaseException().Message ?? "save_failed");
                 saveTask = null; saveOperation = null;
                 if (savePreview != null) UnityEngine.Object.Destroy(savePreview); savePreview = null;
+            }
+            else if (saveTask != null && DateTime.UtcNow > saveDeadline)
+            {
+                // Keep the preview texture: the abandoned task may still be reading it.
+                ConstructionAccess.Finish(saveOperation, "failed", "save_timeout_task_abandoned_check_save_list_before_retrying");
+                log.Warn("Save task exceeded " + SaveTimeoutSeconds + " s; released the bridge save lock without cancelling the game's task.");
+                saveTask = null; saveOperation = null; savePreview = null;
             }
             TileTick();
             if (batch == null || (string)batch["status"] != "running") return;
