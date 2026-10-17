@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Offline reflection probe over the player's own game/mod assemblies. Never loaded by the game. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <BridgeTestFramework Condition="'$(BridgeTestFramework)' == ''">net9.0</BridgeTestFramework>
+    <TargetFramework>$(BridgeTestFramework)</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+</Project>
