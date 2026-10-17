@@ -111,6 +111,10 @@ namespace CitiesIIAgentBridge
                 {
                     var points = GetControlPoints(out var pointsDeps); pointsDeps.Complete(); points.Clear(); points.Add(start); if (ExtraPoints != null) foreach (var p in ExtraPoints) points.Add(p); points.Add(end);
                     ConstructionAccess.Field(typeof(NetToolSystem), this, "m_Prefab", prefab);
+                    // The tool UI pushes its own elevation setting into the tool after activation
+                    // (live test: a +10 m request was built at ground level), so re-assert it here,
+                    // immediately before the snap job reads it.
+                    elevation = RequestedElevation;
                     applyMode = ApplyMode.Clear;
                     deps = (JobHandle)ConstructionAccess.Call(typeof(NetToolSystem), this, "SnapControlPoints", deps, false);
                     deps = (JobHandle)ConstructionAccess.Call(typeof(NetToolSystem), this, "UpdateCourse", deps, false);
@@ -128,6 +132,7 @@ namespace CitiesIIAgentBridge
                     using (var ts = q.ToComponentDataArray<Temp>(Allocator.Temp)) foreach (var t in ts) cost = checked(cost + Math.Max(0, t.m_Cost));
                     ConstructionAccess.Results[operation]["previewCost"] = cost;
                     if (cost > maxCost || cost > World.GetExistingSystemManaged<CitySystem>().moneyAmount) throw new InvalidOperationException("cost_exceeds_budget");
+                    CheckPreviewElevation();
                     applyMode = ApplyMode.Apply; stage = 2; frames = 0;
                     ConstructionAccess.Results[operation]["status"] = "applying"; return deps;
                 }
@@ -147,6 +152,24 @@ namespace CitiesIIAgentBridge
             }
             catch (Exception e) { Finish("failed", e.Message); }
             return deps;
+        }
+        // A requested non-ground end elevation must be present on the previewed end node before
+        // anything is applied; otherwise the road would silently be built at ground level.
+        private void CheckPreviewElevation()
+        {
+            if (math.abs(end.m_Elevation) < 1f || EntityManager.HasComponent<Game.Net.Node>(end.m_OriginalEntity)) return;
+            float best = float.MaxValue, found = 0; bool any = false;
+            using (var q = EntityManager.CreateEntityQuery(ComponentType.ReadOnly<Temp>(), ComponentType.ReadOnly<Game.Net.Node>()))
+            using (var es = q.ToEntityArray(Allocator.Temp)) foreach (var e in es)
+            {
+                float d = math.distance(EntityManager.GetComponentData<Game.Net.Node>(e).m_Position.xz, end.m_Position.xz);
+                if (d > 12 || d >= best) continue;
+                best = d; any = true;
+                found = EntityManager.HasComponent<Game.Net.Elevation>(e) ? math.cmax(math.abs(EntityManager.GetComponentData<Game.Net.Elevation>(e).m_Elevation)) * math.sign(end.m_Elevation) : 0;
+            }
+            ConstructionAccess.Results[operation]["previewEndElevation"] = any ? (JToken)found : null;
+            if (!any || math.abs(found - end.m_Elevation) > math.max(1.5f, math.abs(end.m_Elevation) * 0.25f))
+                throw new InvalidOperationException("requested_elevation_not_in_preview");
         }
         private void Finish(string status, string error = null)
         {
