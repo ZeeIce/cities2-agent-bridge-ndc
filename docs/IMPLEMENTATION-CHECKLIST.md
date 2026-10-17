@@ -14,15 +14,21 @@ A level is claimed only with evidence. Levels 5–6 require the rebuilt DLL to b
 
 **Bugs found live and fixed:** edge lane counts were doubled on long edges (the game splits each lane into pieces along the edge); `RoadData.SeparatedCarriageways` is not set on Medium Road Divided, so divided roads are now detected by carriageway groups. Both fixes still need live run 2.
 
+**Live run 2 (same city, fixed DLL):** all 17 calls returned `ok`.
+- Lane counts: Small Road 1/1, Medium Road 2/2, Medium Road Divided 2/2.
+- Carriageway groups: 1 on undivided roads and 2 on Medium Road Divided. Classes are now local, collector and arterial respectively.
+- Hierarchy gaps fell from 6 (inflated by the lane bug) to 1 real collector–highway junction.
+- `compositionFlags` showed only `Edge,Pavement` on all three road types, so composition flags cannot detect medians in this version; carriageway groups can.
+
 | Feature | 1 | 2 | 3 | 4 | 5 | 6 | Notes |
 |---|---|---|---|---|---|---|---|
 | Save-lock timeout (180 s) | ✔ | ✔ | — | — | ✗ | ✗ | Needs an in-game repro of a stuck save |
 | `building_get_details` / `building_query` | ✔ | ✔ | logic ✔ | ✔ | ✔ run 1 | ✔ run 1 | Category/utilization logic unit-tested |
 | `building_analyze_utilization` | ✔ | ✔ | logic ✔ | ✔ | ✔ run 1 | ✔ run 1 | |
 | `city_get_zoning_summary` | ✔ | ✔ | — | ✔ | ✔ run 1 | ✔ run 1 | |
-| `traffic_get_network` | ✔ | ✔ | logic ✔ | ✔ | runs; lane-count/class bug fixed, re-verify in run 2 | — | Lane direction from `EdgeLane.m_EdgeDelta` must be checked in-game |
+| `traffic_get_network` | ✔ | ✔ | logic ✔ | ✔ | ✔ run 2 | ✔ run 2 | Lane direction from `EdgeLane.m_EdgeDelta` must be checked in-game |
 | `traffic_get_intersection` / `traffic_get_lane_rules` | ✔ | ✔ | — | ✔ | ✔ run 1 | ✔ run 1 | Edge resolution via `PathNode.GetOwnerIndex`; unresolved count reported. Confirm in-game that resolution succeeds |
-| `traffic_find_bottlenecks` / `traffic_analyze` | ✔ | ✔ | logic ✔ | ✔ | runs; classes affected by lane bug, re-verify in run 2 | — | |
+| `traffic_find_bottlenecks` / `traffic_analyze` | ✔ | ✔ | logic ✔ | ✔ | ✔ run 2 | ✔ run 2 | |
 | `city_analyze` + recommendation schema | ✔ | ✔ | ✔ | — | ✔ run 1 | ✔ run 1 | Rules tested against Fort Johnson figures measured live on 2026-10-17 |
 | Traffic mod read adapter | ✔ | ✔ | — | types checked by reflection offline | ✔ run 1 | ✔ run 1 | |
 | Road Builder list/get/validate | ✔ | ✔ | ✔ (all 51 installed configs parse) | — | list ✔ run 1 | list ✔ run 1 | |
@@ -44,6 +50,5 @@ A level is claimed only with evidence. Levels 5–6 require the rebuilt DLL to b
 
 ## Next steps
 
-1. Install the 0.6.0-dev DLL (backing up 0.5.0) and load a disposable or backed-up city.
-2. Run each new command and record outputs as evidence (levels 5–6). In particular, check lane directions, intersection edge resolution and that zone names match the in-game zoning.
-3. Then implement vanilla upgrade-flag writes behind preview validation and explicit approval.
+1. Still unverified live: the save-lock timeout (needs a stuck save), `roadbuilder_get_config` and `roadbuilder_validate_config` in-game.
+2. Implement vanilla upgrade-flag writes behind preview validation and explicit approval.
