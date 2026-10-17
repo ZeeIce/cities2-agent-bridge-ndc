@@ -44,7 +44,7 @@ try {
     Write-Output 'Rotation and happiness diagnostics native contracts verified.'
     # 0.6.0 telemetry reads these members directly; a renamed field must fail here, not in-game.
     $telemetry = [ordered]@{
-        'Game.Net.CarLane' = @('m_Flags','m_SpeedLimit'); 'Game.Net.EdgeLane' = @('m_EdgeDelta'); 'Game.Net.Lane' = @('m_StartNode','m_EndNode')
+        'Game.Net.CarLane' = @('m_Flags','m_SpeedLimit','m_CarriagewayGroup'); 'Game.Net.EdgeLane' = @('m_EdgeDelta'); 'Game.Net.Lane' = @('m_StartNode','m_EndNode')
         'Game.Net.Road' = @('m_TrafficFlowDuration0','m_TrafficFlowDistance0'); 'Game.Net.TrafficLights' = @('m_State','m_SignalGroupCount','m_CurrentSignalGroup')
         'Game.Net.Upgraded' = @('m_Flags'); 'Game.Net.Composition' = @('m_Edge'); 'Game.Prefabs.NetCompositionData' = @('m_Width')
         'Game.Prefabs.RoadData' = @('m_Flags'); 'Game.Prefabs.SchoolData' = @('m_StudentCapacity'); 'Game.Prefabs.HospitalData' = @('m_PatientCapacity')

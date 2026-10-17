@@ -24,7 +24,7 @@ namespace CitiesIIAgentBridge
         {
             public Entity Edge, Start, End; public string Prefab; public float Length; public float3 A, D;
             public int Forward, Backward, PublicOnly, Parking, Pedestrian, Track; public float SpeedLimit;
-            public bool HighwayRules, Separated; public RoadClass Class;
+            public bool HighwayRules, Separated, Divided; public int Carriageways; public List<string> CompositionFlags = new List<string>(); public RoadClass Class;
             public float[] Flow; public float MinFlow; public float? Width;
             public JArray EdgeUpgrades = new JArray();
         }
@@ -50,10 +50,15 @@ namespace CitiesIIAgentBridge
                 s.HighwayRules = (rd.m_Flags & Game.Prefabs.RoadFlags.UseHighwayRules) != 0;
                 s.Separated = (rd.m_Flags & Game.Prefabs.RoadFlags.SeparatedCarriageways) != 0;
             }
+            var carriageways = new HashSet<ushort>();
             if (em.HasBuffer<SubLane>(e))
                 foreach (var sub in em.GetBuffer<SubLane>(e, true))
                 {
                     var lane = sub.m_SubLane; if (!em.Exists(lane)) continue;
+                    // Long edges split each physical lane into consecutive pieces along the edge
+                    // (observed live: 4/4 car lanes reported on a 2/2 Medium Road). Count only the
+                    // piece that touches the edge start so each physical lane is counted once.
+                    if (em.HasComponent<EdgeLane>(lane)) { var d = em.GetComponentData<EdgeLane>(lane).m_EdgeDelta; if (math.min(d.x, d.y) > 0.001f) continue; }
                     if (em.HasComponent<ParkingLane>(lane)) { ++s.Parking; continue; }
                     if (em.HasComponent<PedestrianLane>(lane)) { ++s.Pedestrian; continue; }
                     if (em.HasComponent<TrackLane>(lane) && !em.HasComponent<CarLane>(lane)) { ++s.Track; continue; }
@@ -63,15 +68,24 @@ namespace CitiesIIAgentBridge
                     if (delta.y >= delta.x) ++s.Forward; else ++s.Backward;
                     if ((car.m_Flags & CarLaneFlags.PublicOnly) != 0) ++s.PublicOnly;
                     s.SpeedLimit = math.max(s.SpeedLimit, car.m_SpeedLimit);
+                    carriageways.Add(car.m_CarriagewayGroup);
                 }
-            s.Class = TrafficMetrics.Classify(s.HighwayRules, s.Forward, s.Backward, s.Separated);
-            var flow = NetUtils.GetTrafficFlowSpeed(em.GetComponentData<Road>(e));
-            s.Flow = new[] { flow.x, flow.y, flow.z, flow.w }; s.MinFlow = TrafficMetrics.MinFlow(s.Flow);
+            s.Carriageways = carriageways.Count;
             if (em.HasComponent<Composition>(e))
             {
                 var composition = em.GetComponentData<Composition>(e).m_Edge;
-                if (em.HasComponent<NetCompositionData>(composition)) s.Width = em.GetComponentData<NetCompositionData>(composition).m_Width;
+                if (em.HasComponent<NetCompositionData>(composition))
+                {
+                    var data = em.GetComponentData<NetCompositionData>(composition);
+                    s.Width = data.m_Width; s.CompositionFlags = FlagNames(data.m_Flags.m_General);
+                }
             }
+            // RoadData.SeparatedCarriageways is not set on Medium Road Divided (observed live), so a
+            // median is recognised by the lanes themselves belonging to more than one carriageway.
+            s.Divided = s.Separated || s.Carriageways >= 2;
+            s.Class = TrafficMetrics.Classify(s.HighwayRules, s.Forward, s.Backward, s.Divided);
+            var flow = NetUtils.GetTrafficFlowSpeed(em.GetComponentData<Road>(e));
+            s.Flow = new[] { flow.x, flow.y, flow.z, flow.w }; s.MinFlow = TrafficMetrics.MinFlow(s.Flow);
             if (em.HasComponent<Upgraded>(e))
             {
                 var up = em.GetComponentData<Upgraded>(e).m_Flags;
@@ -91,6 +105,7 @@ namespace CitiesIIAgentBridge
             row["lanes"] = new JObject { ["carForward"] = s.Forward, ["carBackward"] = s.Backward, ["publicTransportOnly"] = s.PublicOnly, ["parking"] = s.Parking, ["pedestrian"] = s.Pedestrian, ["trackOnly"] = s.Track };
             row["speedLimitNative"] = Math.Round(s.SpeedLimit, 3);
             row["highwayRules"] = s.HighwayRules; row["separatedCarriageways"] = s.Separated;
+            row["carriageways"] = s.Carriageways; row["divided"] = s.Divided; row["compositionFlags"] = new JArray(s.CompositionFlags);
             row["widthMetres"] = s.Width == null ? null : (JToken)Math.Round(s.Width.Value, 2);
             row["flowSpeedNative"] = new JArray(s.Flow.Select(f => (JToken)Math.Round(f, 4)));
             row["minFlowSpeed"] = s.MinFlow < 0 ? null : (JToken)Math.Round(s.MinFlow, 4);

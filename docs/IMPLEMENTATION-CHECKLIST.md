@@ -2,20 +2,30 @@
 
 Levels: **1** implemented · **2** compiles against the installed `Game.dll` · **3** passes automated offline tests · **4** native members verified by `verify-api.ps1` · **5** verified in the running game · **6** verified through the full agent → mailbox → game workflow.
 
-A level is claimed only with evidence. Levels 5–6 require the rebuilt DLL to be installed and a city loaded. **As of 2026-10-17 the game was not running, so nothing below is verified at levels 5–6.**
+A level is claimed only with evidence. Levels 5–6 require the rebuilt DLL to be installed and a city loaded.
+
+**Live run 1 (2026-10-17, Fort Johnson, pop 7,225, 0.6.0-dev):** all 17 read-only calls returned `ok`, through the PowerShell mailbox client (level 6 for transport). Content cross-checks:
+- Per-building job capacity sums to 1,716, exactly matching `CountWorkplacesSystem`.
+- HighSchool02 reports 400/400 students, matching the 0.5.0 diagnostics.
+- Resident total of 7,580 vs population 7,225 is consistent with households still moving in.
+- Zone names map correctly: NA Residential High has 614 cells, matching the raw `zone 21` count.
+- The intersection at (4816, −4487) resolved all 24 connection lanes (0 unresolved), with 2 lanes per movement on Medium Roads and 1 on Small Roads, and detected the game's traffic lights.
+- Traffic-mod adapter: types resolved and records read (no custom rules at that node). Road Builder 0.7.0 and Traffic 0.2.13 were detected.
+
+**Bugs found live and fixed:** edge lane counts were doubled on long edges (the game splits each lane into pieces along the edge); `RoadData.SeparatedCarriageways` is not set on Medium Road Divided, so divided roads are now detected by carriageway groups. Both fixes still need live run 2.
 
 | Feature | 1 | 2 | 3 | 4 | 5 | 6 | Notes |
 |---|---|---|---|---|---|---|---|
 | Save-lock timeout (180 s) | ✔ | ✔ | — | — | ✗ | ✗ | Needs an in-game repro of a stuck save |
-| `building_get_details` / `building_query` | ✔ | ✔ | logic ✔ | ✔ | ✗ | ✗ | Category/utilization logic unit-tested |
-| `building_analyze_utilization` | ✔ | ✔ | logic ✔ | ✔ | ✗ | ✗ | |
-| `city_get_zoning_summary` | ✔ | ✔ | — | ✔ | ✗ | ✗ | |
-| `traffic_get_network` | ✔ | ✔ | logic ✔ | ✔ | ✗ | ✗ | Lane direction from `EdgeLane.m_EdgeDelta` must be checked in-game |
-| `traffic_get_intersection` / `traffic_get_lane_rules` | ✔ | ✔ | — | ✔ | ✗ | ✗ | Edge resolution via `PathNode.GetOwnerIndex`; unresolved count reported. Confirm in-game that resolution succeeds |
-| `traffic_find_bottlenecks` / `traffic_analyze` | ✔ | ✔ | logic ✔ | ✔ | ✗ | ✗ | |
-| `city_analyze` + recommendation schema | ✔ | ✔ | ✔ | — | ✗ | ✗ | Rules tested against Fort Johnson figures measured live on 2026-10-17 |
-| Traffic mod read adapter | ✔ | ✔ | — | types checked by reflection offline | ✗ | ✗ | |
-| Road Builder list/get/validate | ✔ | ✔ | ✔ (all 51 installed configs parse) | — | ✗ | ✗ | |
+| `building_get_details` / `building_query` | ✔ | ✔ | logic ✔ | ✔ | ✔ run 1 | ✔ run 1 | Category/utilization logic unit-tested |
+| `building_analyze_utilization` | ✔ | ✔ | logic ✔ | ✔ | ✔ run 1 | ✔ run 1 | |
+| `city_get_zoning_summary` | ✔ | ✔ | — | ✔ | ✔ run 1 | ✔ run 1 | |
+| `traffic_get_network` | ✔ | ✔ | logic ✔ | ✔ | runs; lane-count/class bug fixed, re-verify in run 2 | — | Lane direction from `EdgeLane.m_EdgeDelta` must be checked in-game |
+| `traffic_get_intersection` / `traffic_get_lane_rules` | ✔ | ✔ | — | ✔ | ✔ run 1 | ✔ run 1 | Edge resolution via `PathNode.GetOwnerIndex`; unresolved count reported. Confirm in-game that resolution succeeds |
+| `traffic_find_bottlenecks` / `traffic_analyze` | ✔ | ✔ | logic ✔ | ✔ | runs; classes affected by lane bug, re-verify in run 2 | — | |
+| `city_analyze` + recommendation schema | ✔ | ✔ | ✔ | — | ✔ run 1 | ✔ run 1 | Rules tested against Fort Johnson figures measured live on 2026-10-17 |
+| Traffic mod read adapter | ✔ | ✔ | — | types checked by reflection offline | ✔ run 1 | ✔ run 1 | |
+| Road Builder list/get/validate | ✔ | ✔ | ✔ (all 51 installed configs parse) | — | list ✔ run 1 | list ✔ run 1 | |
 | Registry consistency (66 commands) | ✔ | ✔ | ✔ | ✔ | — | — | |
 | Install discovery (`find-game.ps1`) | ✔ | — | manual ✔ | — | — | — | Resolved `C:\Games\Cities - Skylines II` from `Player.log` |
 
