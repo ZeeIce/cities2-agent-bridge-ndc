@@ -80,13 +80,29 @@ namespace CitiesIIAgentBridge
             var roadTool = w.GetExistingSystemManaged<BridgeRoadTool>();
             roadTool.ExtraPoints = null; roadTool.RequestedMode = NetToolSystem.Mode.Straight;
             float elevation = args["elevation"] == null ? 0 : RequiredFloat(args,"elevation");
-            if (elevation < -100 || elevation > 100) throw new ArgumentException("elevation_out_of_range");
-            roadTool.RequestedElevation = elevation;
-            a.m_Elevation = b.m_Elevation = elevation; a.m_HitPosition.y += elevation; b.m_HitPosition.y += elevation;
-            a.m_Position.y += elevation; b.m_Position.y += elevation;
+            // Per-end elevations allow ramps (ground at one end, elevated at the other) for grade
+            // separation. Both default to "elevation", preserving the original behaviour.
+            float startElevation = args["startElevation"] == null ? elevation : RequiredFloat(args, "startElevation");
+            float endElevation = args["endElevation"] == null ? elevation : RequiredFloat(args, "endElevation");
+            foreach (var e in new[] { elevation, startElevation, endElevation })
+                if (e < -100 || e > 100) throw new ArgumentException("elevation_out_of_range");
+            roadTool.RequestedElevation = endElevation;
+            ApplyElevation(w, ref a, startElevation); ApplyElevation(w, ref b, endElevation);
             if (args["control"] is JObject c) { roadTool.ExtraPoints = new[] { BuildPoint(w, c) }; roadTool.RequestedMode = NetToolSystem.Mode.SimpleCurve; }
             roadTool.Begin(p, a, b, budget);
             return ConstructionAccess.Status(ConstructionAccess.Active);
+        }
+        // A point attached to an existing node keeps that node's real position and elevation
+        // (adding the requested offset again would double-count it on elevated nodes).
+        private static void ApplyElevation(World w, ref ControlPoint p, float elevation)
+        {
+            var em = w.EntityManager;
+            if (p.m_OriginalEntity != Entity.Null && em.HasComponent<Game.Net.Node>(p.m_OriginalEntity))
+            {
+                p.m_Elevation = em.HasComponent<Game.Net.Elevation>(p.m_OriginalEntity) ? math.cmax(em.GetComponentData<Game.Net.Elevation>(p.m_OriginalEntity).m_Elevation) : 0;
+                return;
+            }
+            p.m_Elevation = elevation; p.m_Position.y += elevation; p.m_HitPosition.y += elevation;
         }
         private JObject StartZone(JObject args)
         {
