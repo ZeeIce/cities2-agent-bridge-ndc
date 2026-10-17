@@ -1,5 +1,6 @@
-param([string]$GamePath = 'C:\Program Files (x86)\Steam\steamapps\common\Cities Skylines II')
+param([string]$GamePath = '')
 $ErrorActionPreference = 'Stop'
+if (!$GamePath) { $GamePath = & (Join-Path $PSScriptRoot 'find-game.ps1') }
 $managed = Join-Path $GamePath 'Cities2_Data\Managed'
 Add-Type -Path (Join-Path $managed 'Colossal.Mono.Cecil.dll')
 $assembly = [Colossal.Mono.Cecil.AssemblyDefinition]::ReadAssembly((Join-Path $managed 'Game.dll'))

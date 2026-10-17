@@ -31,7 +31,7 @@ namespace CitiesIIAgentBridge
         private bool disposed;
         private bool faulted;
         private bool mailboxContended;
-        private const string ModVersion = "0.5.0";
+        private const string ModVersion = "0.6.0-dev";
 
         public void OnLoad(UpdateSystem updateSystem)
         {

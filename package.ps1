@@ -5,7 +5,7 @@ param(
     [string]$OutputRoot = (Join-Path $PSScriptRoot 'artifacts/releases')
 )
 $ErrorActionPreference = 'Stop'
-$version = '0.5.0'
+$version = '0.6.0-dev'
 $output = [IO.Path]::GetFullPath($OutputRoot)
 $run = Join-Path $output ([DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss') + '-' + [guid]::NewGuid().ToString('N').Substring(0,8))
 $name = "CitiesIIAgentBridge-$version-community"

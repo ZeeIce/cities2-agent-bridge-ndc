@@ -1,7 +1,8 @@
-param([string]$GamePath = 'C:\Program Files (x86)\Steam\steamapps\common\Cities Skylines II',
+param([string]$GamePath = '',
     [string]$OutputDirectory = (Join-Path $PSScriptRoot 'artifacts'),
     [switch]$CommunityRelease)
 $ErrorActionPreference = 'Stop'
+if (!$GamePath) { $GamePath = & (Join-Path $PSScriptRoot 'find-game.ps1') }
 $managed = Join-Path $GamePath 'Cities2_Data\Managed'
 if (!(Test-Path -LiteralPath (Join-Path $managed 'Game.dll'))) { throw 'Game.dll not found' }
 $sdkLine = (& dotnet --list-sdks | Select-Object -Last 1)
@@ -29,7 +30,7 @@ $rsp = Join-Path $out 'compile.rsp'
 & dotnet $compiler ('@' + $rsp)
 if ($LASTEXITCODE -ne 0) { throw 'Compilation failed' }
 $manifest = [ordered]@{
-    modVersion = '0.5.0'
+    modVersion = '0.6.0-dev'
     builtUtc = [DateTime]::UtcNow.ToString('O')
     gameAssemblySha256 = (Get-FileHash -LiteralPath (Join-Path $managed 'Game.dll')).Hash
     dllSha256 = (Get-FileHash -LiteralPath (Join-Path $out 'CitiesIIAgentBridge.dll')).Hash
