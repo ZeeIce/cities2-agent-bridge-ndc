@@ -14,6 +14,14 @@ A level is claimed only with evidence. Levels 5–6 require the rebuilt DLL to b
 
 **Bugs found live and fixed:** edge lane counts were doubled on long edges (the game splits each lane into pieces along the edge); `RoadData.SeparatedCarriageways` is not set on Medium Road Divided, so divided roads are now detected by carriageway groups. Both fixes still need live run 2.
 
+**Live run 3 (traffic controls, authorised apply-and-undo):** every apply was refused at preview by an over-strict neighbourhood whitelist (the game regenerates neighbouring geometry). No change occurred, the junction's 16 movements were identical before and after, and a checkpoint had been saved. Fixed by enforcing the real property: nothing deleted, no new network, and no Upgraded change except on the target.
+
+**Live run 4 (fixed DLL, quiet local 4-way in the east district):**
+- Previews predicted the flags correctly (`AllWayStop`, `TrafficLights`, right-side `ForbidLeftTurn`) with no city change.
+- All-way stop applied: all 16 movements gained `Stop`. `default` removed it and restored all 16 exactly.
+- Left-turn ban applied on the expected end. The game keeps the turning lane but flags it `Forbidden` (visible in `movements[].controls`). Allowing it restored the original state.
+- Repeating a request returned `changed: false`.
+
 **Live run 2 (same city, fixed DLL):** all 17 calls returned `ok`.
 - Lane counts: Small Road 1/1, Medium Road 2/2, Medium Road Divided 2/2.
 - Carriageway groups: 1 on undivided roads and 2 on Medium Road Divided. Classes are now local, collector and arterial respectively.
@@ -32,7 +40,7 @@ A level is claimed only with evidence. Levels 5–6 require the rebuilt DLL to b
 | `city_analyze` + recommendation schema | ✔ | ✔ | ✔ | — | ✔ run 1 | ✔ run 1 | Rules tested against Fort Johnson figures measured live on 2026-10-17 |
 | Traffic mod read adapter | ✔ | ✔ | — | types checked by reflection offline | ✔ run 1 | ✔ run 1 | |
 | Road Builder list/get/validate | ✔ | ✔ | ✔ (all 51 installed configs parse) | — | list ✔ run 1 | list ✔ run 1 | |
-| `traffic_set_intersection_control` / `traffic_set_turn_restriction` | ✔ | ✔ | — | ✔ (PlaceableNetData, Temp, leftHandTraffic) | ✗ | ✗ | Native upgrade tool; logic follows decompiled NetToolSystem.CreatePath/AddControlPoints |
+| `traffic_set_intersection_control` / `traffic_set_turn_restriction` | ✔ | ✔ | — | ✔ (PlaceableNetData, Temp, leftHandTraffic) | ✔ run 4 | ✔ run 4 | Native upgrade tool; logic follows decompiled NetToolSystem.CreatePath/AddControlPoints |
 | Registry consistency (68 commands) | ✔ | ✔ | ✔ | ✔ | — | — | |
 | Install discovery (`find-game.ps1`) | ✔ | — | manual ✔ | — | — | — | Resolved `C:\Games\Cities - Skylines II` from `Player.log` |
 
@@ -41,7 +49,7 @@ A level is claimed only with evidence. Levels 5–6 require the rebuilt DLL to b
 | Item | Status | Evidence / reason |
 |---|---|---|
 | Traffic mod rule writes (lane connections, priorities) | Blocked | The installed `Traffic.dll` exposes no public API (reflection: only `Traffic.Mod`, `ModSettings` and internal systems). Its rules are created through the mod's own tool, which writes `Temp`/definition entities processed by its systems. Writing its buffers directly would bypass its validation and serialization. A supported path would need an upstream API or a carefully driven instance of its tool. |
-| Vanilla turn restrictions / traffic lights / all-way stop (write) | Implemented, awaiting live verification | `CompositionFlags.Side.ForbidLeftTurn/ForbidRightTurn/ForbidStraight` and `General.TrafficLights/RemoveTrafficLights/AllWayStop` are applied through the native net tool's upgrade mode. The existing `BridgeRoadTool` would need an upgrade-flags path, plus preview validation. |
+| Vanilla turn restrictions / traffic lights / all-way stop (write) | Done; verified live (run 4) | `CompositionFlags.Side.ForbidLeftTurn/ForbidRightTurn/ForbidStraight` and `General.TrafficLights/RemoveTrafficLights/AllWayStop` are applied through the native net tool's upgrade mode. The existing `BridgeRoadTool` would need an upgrade-flags path, plus preview validation. |
 | Road Builder create/apply | Blocked | Road Builder generates prefabs from its own config objects (`RoadBuilderSystem`, `RoadBuilderSerializeSystem`). Writing new JSON files would only take effect on its next load and bypass its UI validation. There is no public apply API. |
 | Rule capture/restore across road replacement | Blocked on the two items above | Entity IDs change on replacement, so restoration needs re-identification by position plus lane index. This can be designed once a write path exists. |
 | CS2-Mod-Suite integration | Not applicable | Not installed in this environment. |

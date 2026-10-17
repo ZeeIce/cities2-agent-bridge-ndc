@@ -136,6 +136,8 @@ Operation result: `target`, `flagsBefore`, `flagsPreview`, `flagsAfter`, `previe
 | `forbid` | bool | true = add the ban, false = remove it |
 | `previewOnly`, `maxCost` | as above | |
 
+A banned movement is not removed from the junction: the game keeps the connection lane and flags it `Forbidden`, which `traffic_get_intersection` reports in `movements[].controls`. For removals, `flagsPreview` can still show the old flags; `flagsAfter` is authoritative.
+
 The ban is stored on the edge side that corresponds to the chosen end: start → left and end → right in right-hand traffic, swapped in left-hand traffic. The result reports `side`, and verification also checks that the opposite end did not change.
 
 ```json
