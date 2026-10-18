@@ -169,14 +169,25 @@ namespace CitiesIIAgentBridge
         }
         private JObject Tiles()
         {
-            var w = RequireCity(); var em = w.EntityManager; var rows = new JArray();
+            var w = RequireCity(); var em = w.EntityManager; var rows = new JArray(); int owned = 0;
             using (var q = em.CreateEntityQuery(ComponentType.ReadOnly<Game.Areas.MapTile>()))
             using (var es = q.ToEntityArray(Allocator.Temp)) foreach (var e in es)
             {
                 var polygon = new JArray(); if (em.HasBuffer<Game.Areas.Node>(e)) foreach (var n in em.GetBuffer<Game.Areas.Node>(e, true)) polygon.Add(Vector(n.m_Position));
-                rows.Add(new JObject { ["index"] = e.Index, ["version"] = e.Version, ["purchased"] = !em.HasComponent<Game.Common.Native>(e), ["polygon"] = polygon });
+                bool purchased = !em.HasComponent<Game.Common.Native>(e); if (purchased) ++owned;
+                var row = new JObject { ["index"] = e.Index, ["version"] = e.Version, ["purchased"] = purchased, ["polygon"] = polygon };
+                // Natural resources and buildable area the game prices tiles from (the map tile panel figures).
+                if (em.HasBuffer<Game.Areas.MapFeatureElement>(e))
+                {
+                    var features = new JObject(); var buffer = em.GetBuffer<Game.Areas.MapFeatureElement>(e, true);
+                    for (int i = 0; i < buffer.Length && i < (int)Game.Areas.MapFeature.Count; i++) if (buffer[i].m_Amount != 0f) features[((Game.Areas.MapFeature)i).ToString()] = Math.Round(buffer[i].m_Amount, 2);
+                    row["features"] = features;
+                }
+                rows.Add(row);
             }
-            return new JObject { ["tiles"] = rows, ["availablePurchases"] = w.GetExistingSystemManaged<MapTilePurchaseSystem>().GetAvailableTiles() };
+            var purchase = w.GetExistingSystemManaged<MapTilePurchaseSystem>();
+            return new JObject { ["tiles"] = rows, ["availablePurchases"] = purchase.GetAvailableTiles(), ["ownedTiles"] = owned,
+                ["upkeepEnabled"] = purchase.GetMapTileUpkeepEnabled(), ["upkeepCostMultiplier"] = purchase.GetMapTileUpkeepCostMultiplier(owned) };
         }
         private JObject Buildings(JObject args)
         {

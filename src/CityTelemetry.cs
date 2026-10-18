@@ -45,8 +45,13 @@ namespace CitiesIIAgentBridge
                         var row = NativeBuild.Id(e); row["type"] = type; row["priority"] = icon.m_Priority.ToString(); row["position"] = Vector(icon.m_Location);
                         if (em.HasComponent<Owner>(e))
                         {
-                            var owner = em.GetComponentData<Owner>(e).m_Owner; var t = NativeBuild.Id(owner);
+                            var owner = em.GetComponentData<Owner>(e).m_Owner; var direct = owner;
+                            // Bottleneck icons belong to a lane; walk up to the road, junction or building that owns it.
+                            for (int i = 0; i < 4 && em.Exists(owner) && !em.HasComponent<Building>(owner) && !em.HasComponent<Edge>(owner) && !em.HasComponent<Node>(owner) && em.HasComponent<Owner>(owner); i++)
+                                owner = em.GetComponentData<Owner>(owner).m_Owner;
+                            var t = NativeBuild.Id(owner);
                             if (em.Exists(owner) && em.HasComponent<PrefabRef>(owner)) t["prefab"] = ps.GetPrefabName(em.GetComponentData<PrefabRef>(owner).m_Prefab);
+                            if (owner != direct && em.Exists(direct) && em.HasComponent<PrefabRef>(direct)) { var via = NativeBuild.Id(direct); via["prefab"] = ps.GetPrefabName(em.GetComponentData<PrefabRef>(direct).m_Prefab); t["via"] = via; }
                             t["kind"] = !em.Exists(owner) ? "missing" : em.HasComponent<Building>(owner) ? "building" : em.HasComponent<Edge>(owner) ? "road" : em.HasComponent<Node>(owner) ? "junction" : "other";
                             row["target"] = t;
                         }
@@ -269,6 +274,27 @@ namespace CitiesIIAgentBridge
             return result;
         }
 
-        private static string Label(NameSystem names, Entity e) { try { return names.GetRenderedLabelName(e); } catch { return null; } }
+        private static readonly System.Reflection.FieldInfo nameType = typeof(NameSystem.Name).GetField("m_NameType", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic),
+            nameId = typeof(NameSystem.Name).GetField("m_NameID", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic),
+            nameArgs = typeof(NameSystem.Name).GetField("m_NameArgs", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
+        // The name the game UI shows: NameSystem.GetName (e.g. "Bus Line 1", "Autumn Street 12") resolved
+        // against the active localization. GetRenderedLabelName only covers custom names and plain IDs.
+        private static string Label(NameSystem names, Entity e)
+        {
+            try
+            {
+                object name = names.GetName(e);
+                var type = (NameSystem.NameType)nameType.GetValue(name); string id = (string)nameId.GetValue(name);
+                if (type == NameSystem.NameType.Custom) return id;
+                var dictionary = Game.SceneFlow.GameManager.instance.localizationManager.activeDictionary;
+                string Localize(string key) => key != null && dictionary.TryGetValue(key, out var value) ? value : key;
+                string text = Localize(id);
+                if (type == NameSystem.NameType.Formatted && nameArgs.GetValue(name) is string[] args)
+                    for (int i = 0; i + 1 < args.Length; i += 2) text = text.Replace("{" + args[i] + "}", Localize(args[i + 1]));
+                return text;
+            }
+            catch { try { return names.GetRenderedLabelName(e); } catch { return null; } }
+        }
     }
 }

@@ -180,14 +180,14 @@ namespace CitiesIIAgentBridge
                         ["buildingUtilization"] = true, ["buildingUseFullMetrics"] = false,
                         ["roadBuilderConfiguration"] = RoadBuilderAdapter.Loaded ? "read_and_validate" : "files_only",
                         ["roadBuilderApply"] = false,
-                        ["dateMeaning"] = "Raw simulation DateTime; not the displayed game calendar"
+                        ["dateMeaning"] = "get_city_state.clock gives the game clock (year, day, time of day)"
                     },
                     ["relevantAssemblies"] = new JArray(AppDomain.CurrentDomain.GetAssemblies()
                         .Where(a => new[] { "Traffic", "BuildingUse", "RoadBuilder", "FindIt", "PlopTheGrowables", "CityPlanningDraft", "CitiesIIAgentBridge" }.Contains(a.GetName().Name))
                         .Select(a => new JObject { ["name"] = a.GetName().Name, ["version"] = a.GetName().Version.ToString(), ["status"] = "assembly_loaded_not_health_verified" })),
                     ["buildings"] = new JArray("building_get_details", "building_query", "building_analyze_utilization"),
-                    ["traffic"] = new JArray("traffic_get_network", "traffic_get_intersection", "traffic_get_lane_rules", "traffic_find_bottlenecks", "traffic_analyze", "traffic_get_queues"),
-                    ["cityTelemetry"] = new JArray("city_get_notifications", "city_get_statistics"),
+                    ["traffic"] = new JArray("traffic_get_network", "traffic_get_intersection", "traffic_get_lane_rules", "traffic_find_bottlenecks", "traffic_analyze", "traffic_get_queues", "traffic_get_game_bottlenecks"),
+                    ["cityTelemetry"] = new JArray("city_get_notifications", "city_get_statistics", "city_get_map_layer", "city_capture_view", "city_get_finances", "city_get_utilities", "city_get_policies"),
                     ["transit"] = new JArray("transit_get_lines"),
                     ["analysis"] = new JArray("city_get_zoning_summary", "city_analyze"),
                     ["integrations"] = new JArray("integrations_status", "roadbuilder_list_configs", "roadbuilder_get_config", "roadbuilder_validate_config"),
@@ -211,6 +211,12 @@ namespace CitiesIIAgentBridge
                 case "city_get_notifications": return CityGetNotifications(args);
                 case "city_get_statistics": return CityGetStatistics(args);
                 case "transit_get_lines": return TransitGetLines(args);
+                case "traffic_get_game_bottlenecks": return TrafficGetGameBottlenecks(args);
+                case "city_get_map_layer": return CityGetMapLayer(args);
+                case "city_capture_view": return CityCaptureView(args);
+                case "city_get_finances": return CityGetFinances();
+                case "city_get_utilities": return CityGetUtilities();
+                case "city_get_policies": return CityGetPolicies(args);
                 case "traffic_set_intersection_control": return SetIntersectionControl(args);
                 case "traffic_set_turn_restriction": return SetTurnRestriction(args);
                 case "traffic_place_roundabout": return PlaceRoundabout(args);
@@ -314,7 +320,8 @@ namespace CitiesIIAgentBridge
                 ["xp"] = city.XP, ["simulationFrame"] = simulation?.frameIndex,
                 ["selectedSpeed"] = simulation?.selectedSpeed,
                 ["date"] = time?.GetCurrentDateTime().ToString("O"),
-                ["dateMeaning"] = "Raw simulation DateTime; displayed game calendar may differ",
+                ["dateMeaning"] = "TimeSystem.GetCurrentDateTime: year, day of year and time of day as the game clock computes them",
+                ["clock"] = time == null ? null : new JObject { ["year"] = time.year, ["dayOfYear"] = time.GetCurrentDateTime().DayOfYear, ["daysPerYear"] = time.daysPerYear, ["timeOfDay"] = time.GetCurrentDateTime().ToString("HH:mm"), ["normalizedDate"] = Math.Round(time.normalizedDate, 4) },
                 ["controlEnabled"] = settings.AllowControl, ["citySession"] = citySession
             };
             if (em.HasComponent<Population>(city.City))

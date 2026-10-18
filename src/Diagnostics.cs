@@ -60,7 +60,8 @@ namespace CitiesIIAgentBridge
                 ["homelessnessRateNative"] = h.HomelessnessRate, ["homelessCitizens"] = h.HomelessCitizenCount,
                 ["workers"] = h.CityWorkerCount, ["workingAgeEligible"] = h.WorkableCitizenCount,
                 ["movingInCitizens"] = h.MovingInCitizenCount, ["students"] = h.StudentCount,
-                ["educationCounts"] = new JArray(h.UneducatedCount,h.PoorlyEducatedCount,h.EducatedCount,h.WellEducatedCount,h.HighlyEducatedCount)
+                ["educationCounts"] = new JArray(h.UneducatedCount,h.PoorlyEducatedCount,h.EducatedCount,h.WellEducatedCount,h.HighlyEducatedCount),
+                ["ageStructure"] = new JObject { ["children"] = h.ChildrenCount, ["teens"] = h.TeenCount, ["adults"] = h.AdultCount, ["seniors"] = h.SeniorCount, ["movedInCitizens"] = h.MovedInCitizenCount }
             };
             var jobs = w.GetExistingSystemManaged<CountWorkplacesSystem>();
             result["workplaces"] = new JObject { ["totalByEducation"] = RawFields(jobs.GetTotalWorkplaces()), ["vacantByEducation"] = RawFields(jobs.GetFreeWorkplaces()) };

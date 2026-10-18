@@ -14,7 +14,7 @@ New-Item -ItemType Directory -Force -Path $out | Out-Null
 # Construction tools inherit the game's generated tool systems; no new components, SystemAPI, or Burst jobs.
 $references = @('mscorlib','System','System.Core','System.Runtime','netstandard','Game',
     'Colossal.Core','Colossal.Collections','Colossal.Logging','Colossal.Localization','Colossal.IO','Colossal.IO.AssetDatabase',
-    'Colossal.UI','Colossal.UI.Binding','Colossal.Mathematics','UnityEngine.CoreModule',
+    'Colossal.UI','Colossal.UI.Binding','Colossal.Mathematics','UnityEngine.CoreModule','UnityEngine.ImageConversionModule',
     'Unity.Entities','Unity.Collections','Unity.Mathematics','Unity.Burst','Unity.InputSystem','Newtonsoft.Json')
 $debugOption = if ($CommunityRelease) { '/debug-' } else { '/debug:portable' }
 $response = @('/nologo','/target:library','/langversion:9.0','/nostdlib+','/optimize+', $debugOption,
