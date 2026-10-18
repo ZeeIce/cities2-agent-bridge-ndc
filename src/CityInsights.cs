@@ -168,8 +168,9 @@ namespace CitiesIIAgentBridge
                 foreach (PlayerResource r in Enum.GetValues(typeof(PlayerResource)))
                     if ((int)r >= 0 && ServiceFeeSystem.TryGetFee(r, buffer, out float fee))
                     {
-                        var range = feeSystem.GetServiceFees(r);
-                        fees[r.ToString()] = new JObject { ["fee"] = fee, ["estimatedIncome"] = feeSystem.GetServiceFeeIncomeEstimate(r, fee), ["sliderMin"] = range.x, ["sliderMax"] = range.y, ["default"] = range.z };
+                        // GetServiceFees sums the collected fee records as (internal, export, import); live run 6 showed it is not a slider range.
+                        var collected = feeSystem.GetServiceFees(r);
+                        fees[r.ToString()] = new JObject { ["fee"] = fee, ["estimatedIncome"] = feeSystem.GetServiceFeeIncomeEstimate(r, fee), ["collectedInternal"] = collected.x, ["collectedExport"] = collected.y, ["collectedImport"] = collected.z };
                     }
             }
             return new JObject

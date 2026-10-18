@@ -113,6 +113,35 @@ Output: `lines[]` with `name`, `number`, `type`, `color`, `active`, `schedule`, 
 
 The data sources and the queue-head approach for these four commands follow LancerComet/cities-skylines-2-mcp (Apache-2.0).
 
+### `traffic_get_game_bottlenecks`
+Inputs: area filter (optional), `limit` (≤500, default 50).
+
+Output: `cityTrafficFlowPercent` and `cityTrafficVolume` as the traffic info view computes them, `cityRoadsAveraged`, `bottleneckLanes`, and `bottlenecks[]`. Each entry is a lane the game marks with `Bottleneck` (the red car icon), grouped by its road or junction, with `lanes`, `position` and the road's `flowPercent`.
+
+### `city_get_map_layer`
+Inputs: `layer` (`landValue`, `groundPollution`, `airPollution`, `noisePollution`, `groundWater`, `groundWaterPollution`), an optional area (`bbox`, or `x`/`z`/`radius` used as its bounding square) and `resolution` (4–256, default 64).
+
+Output: `values[row][column]` (row 0 = minZ, column 0 = minX; each output cell is the mean of the native cells it covers), `bounds`, `nativeCells`, `nativeCellMetres`, `min`, `max`, `mean` and `peak` with its position. Land value uses a 128×128 map with 112 m cells; the other layers use 256×256 with 56 m cells. With the NoPollution mod installed, the pollution layers are genuinely all zero.
+
+### `city_capture_view`
+Inputs: `width` (160–3840, default 1280); the height follows the screen aspect ratio.
+
+Output: `path` to a PNG under `<mailbox>\captures`, `width`, `height`, `bytes` and `camera`. The image is rendered from the main camera the way the save preview is, with the UI, overlays and info views hidden. Use `set_camera` first to frame an area.
+
+### `city_get_finances` / `city_get_utilities` / `city_get_policies`
+- `city_get_finances` returns the loan (`amount`, `dailyInterestRate`, `dailyPayment`, `creditworthiness`) and `serviceFees` (`fee`, `estimatedIncome`, and `collectedInternal`/`collectedExport`/`collectedImport` from `ServiceFeeSystem.GetServiceFees`).
+- `city_get_utilities` returns electricity production, consumption, battery, import and export; water and sewage capacity, consumption and trade; and the garbage accumulation rate, all in native units.
+- `city_get_policies` takes optional `districtIndex`/`districtVersion` (by default it returns city policies). It returns `policies[]` with `name`, localized `title`, `active`, `adjustment`, `hasSlider` and `locked`.
+
+### Additions to existing commands
+- `get_city_state.clock`: `year`, `dayOfYear`, `daysPerYear`, `timeOfDay` and `normalizedDate`, from the game clock.
+- `get_city_diagnostics.populationDetails.ageStructure`: children, teens, adults, seniors and moved-in citizens.
+- `get_tiles`: per-tile `features` (Area, BuildableLand, FertileLand, Forest, Oil, Ore, GroundWater, Fish, ...), plus `ownedTiles`, `upkeepEnabled` and `upkeepCostMultiplier`.
+- `city_get_notifications`: lane-owned icons (traffic bottlenecks) now resolve to their road or junction, with the lane in `target.via`.
+- `transit_get_lines`: line and stop names come from `NameSystem.GetName`, as the UI shows them (e.g. "Bus line 1", "127 Linden Street").
+
+The data sources for these commands follow LancerComet/cities-skylines-2-mcp (Apache-2.0).
+
 ## Analysis
 
 ### `city_analyze`

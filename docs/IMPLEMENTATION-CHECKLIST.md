@@ -16,6 +16,16 @@ A level is claimed only with evidence. Levels 5–6 require the rebuilt DLL to b
 
 **Live run 3 (traffic controls, authorised apply-and-undo):** every apply was refused at preview by an over-strict neighbourhood whitelist (the game regenerates neighbouring geometry). No change occurred, the junction's 16 movements were identical before and after, and a checkpoint had been saved. Fixed by enforcing the real property: nothing deleted, no new network, and no Upgraded change except on the target.
 
+**Live run 6 (2026-10-18, Fort Johnson, paused, controls off):** every new call returned a result.
+- Fixes confirmed: bottleneck icons resolve to `road`/`junction` with `via` lane. Lines read `Bus line 1-3` and stops read `127 Linden Street`, etc.
+- `traffic_get_game_bottlenecks`: city flow 61%, volume 97 over 364 roads, and 7 marked bottleneck lanes, the worst being a Small Road at (4177, -4521) with 14% flow.
+- `city_get_map_layer`: land value 128x128 at 112 m (peak 266 at 4872, -4648), with a bbox over the shop strip (mean 227). Ground water was non-zero. Air, noise and ground pollution were all zero because the NoPollution mod (pdx 78601) is installed. An invalid layer listed the valid names.
+- `city_capture_view`: a 960x540 PNG (817 kB) showing the city without UI.
+- `city_get_finances`: loan 0, creditworthiness 52,200,000, and 9 service fees. The third value pair is the collected internal/export/import income, not a slider range; the labels were fixed after this run and that fix is not yet re-verified.
+- `city_get_utilities`: electricity 333,148 produced / 314,422 consumed, water 102,596 / 65,183, garbage 343,920.
+- `city_get_policies`: 6 city policies (1 active) with localized titles. The city has no districts, so the district path was only checked for its `district_not_found` error.
+- `get_city_state.clock` returned 2027, day 3 of 12, 03:10. `ageStructure` returned 5,838 children, 1,871 teens, 19,871 adults and 2,581 seniors. `get_tiles` returned 529 owned tiles with resource features, upkeep disabled.
+
 **Live run 5 (2026-10-18, Fort Johnson, population 30,076, paused, controls off):** all 14 calls returned the expected result.
 - `city_get_notifications`: 10 icons (6 No Customers on low-density commercial, 3 Traffic Bottleneck, 1 Powerline Not Connected). The `customer` filter returned 6. Bottleneck icons belong to a lane entity, so their `target.kind` is `other`.
 - `city_get_statistics`: 389 recorded series, 278 samples each. Population, Unemployed and PassengerCountBus histories read. ServiceCount[2] resolved to ConvenienceFood. An unknown type returned the list of valid names.
@@ -50,7 +60,10 @@ A level is claimed only with evidence. Levels 5–6 require the rebuilt DLL to b
 | `city_get_notifications` / `city_get_statistics` | ✔ | ✔ | — | ✔ (Icon, CityStatisticsSystem API by decompile) | ✔ run 5 | ✔ run 5 | Adapted from LancerComet/cities-skylines-2-mcp (Apache-2.0) |
 | `traffic_get_queues` | ✔ | ✔ | queue logic ✔ | ✔ (Blocker) | ✔ run 5 | ✔ run 5 | Queue heads and deadlock loops; same source |
 | `transit_get_lines` | ✔ | ✔ | — | ✔ (TransportUIUtils.BuildTransportLine) | ✔ run 5 | ✔ run 5 | Same source |
-| Registry consistency (74 commands) | ✔ | ✔ | ✔ | ✔ | — | — | |
+| `traffic_get_game_bottlenecks` / `city_get_map_layer` / `city_capture_view` | ✔ | ✔ | — | ✔ (Bottleneck, CellMapSystem, ScreenCaptureHelper) | ✔ run 6 | ✔ run 6 | Pollution layers zero under the NoPollution mod |
+| `city_get_finances` / `city_get_utilities` / `city_get_policies` | ✔ | ✔ | — | ✔ | ✔ run 6 | ✔ run 6 | Fee labels fixed after run 6 (pending re-check); district policies untested (no districts) |
+| Clock, age structure, tile features | ✔ | ✔ | — | ✔ (TimeSystem, CountHouseholdDataSystem, MapFeatureElement) | ✔ run 6 | ✔ run 6 | |
+| Registry consistency (80 commands) | ✔ | ✔ | ✔ | ✔ | — | — | |
 | Install discovery (`find-game.ps1`) | ✔ | — | manual ✔ | — | — | — | Resolved `C:\Games\Cities - Skylines II` from `Player.log` |
 
 ## Blockers and deferred work (with evidence)
