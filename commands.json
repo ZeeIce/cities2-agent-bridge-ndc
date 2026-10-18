@@ -8,6 +8,8 @@
   "cancel_batch",
   "cancel_simulation_step",
   "city_analyze",
+  "city_get_notifications",
+  "city_get_statistics",
   "city_get_zoning_summary",
   "clear_zoning",
   "create_district",
@@ -64,9 +66,11 @@
   "traffic_get_intersection",
   "traffic_get_lane_rules",
   "traffic_get_network",
+  "traffic_get_queues",
   "traffic_place_roundabout",
   "traffic_set_intersection_control",
   "traffic_set_turn_restriction",
+  "transit_get_lines",
   "upgrade_network",
   "zone_rectangle"
 ]

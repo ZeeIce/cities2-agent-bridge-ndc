@@ -186,7 +186,9 @@ namespace CitiesIIAgentBridge
                         .Where(a => new[] { "Traffic", "BuildingUse", "RoadBuilder", "FindIt", "PlopTheGrowables", "CityPlanningDraft", "CitiesIIAgentBridge" }.Contains(a.GetName().Name))
                         .Select(a => new JObject { ["name"] = a.GetName().Name, ["version"] = a.GetName().Version.ToString(), ["status"] = "assembly_loaded_not_health_verified" })),
                     ["buildings"] = new JArray("building_get_details", "building_query", "building_analyze_utilization"),
-                    ["traffic"] = new JArray("traffic_get_network", "traffic_get_intersection", "traffic_get_lane_rules", "traffic_find_bottlenecks", "traffic_analyze"),
+                    ["traffic"] = new JArray("traffic_get_network", "traffic_get_intersection", "traffic_get_lane_rules", "traffic_find_bottlenecks", "traffic_analyze", "traffic_get_queues"),
+                    ["cityTelemetry"] = new JArray("city_get_notifications", "city_get_statistics"),
+                    ["transit"] = new JArray("transit_get_lines"),
                     ["analysis"] = new JArray("city_get_zoning_summary", "city_analyze"),
                     ["integrations"] = new JArray("integrations_status", "roadbuilder_list_configs", "roadbuilder_get_config", "roadbuilder_validate_config"),
                     ["planning"] = new JArray("get_district_atlas","get_city_map","get_city_diagnostics","find_building_sites","preview_building","plan_neighborhood","execute_neighborhood","get_neighborhood_plan"),
@@ -205,6 +207,10 @@ namespace CitiesIIAgentBridge
                 case "traffic_get_lane_rules": return TrafficGetLaneRules(args);
                 case "traffic_find_bottlenecks": return TrafficFindBottlenecks(args);
                 case "traffic_analyze": return TrafficAnalyze(args);
+                case "traffic_get_queues": return TrafficGetQueues(args);
+                case "city_get_notifications": return CityGetNotifications(args);
+                case "city_get_statistics": return CityGetStatistics(args);
+                case "transit_get_lines": return TransitGetLines(args);
                 case "traffic_set_intersection_control": return SetIntersectionControl(args);
                 case "traffic_set_turn_restriction": return SetTurnRestriction(args);
                 case "traffic_place_roundabout": return PlaceRoundabout(args);

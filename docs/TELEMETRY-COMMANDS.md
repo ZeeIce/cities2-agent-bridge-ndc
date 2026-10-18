@@ -87,6 +87,32 @@ Inputs: area filter (optional), `listLimit`.
 
 Output: `roadEdges`, `roadKm`, `lengthByClassMetres`, `intersections`, `signalledNodes`, `intersectionsPerKm`, `hierarchyGaps[]` (gap ≥2), `hierarchyGapTotal`, `deadEnds[]` (outside connections excluded), `shortLinksBetweenIntersections[]` (<40 m), `severeSegments`, `cityAverages`, `recommendations[]`.
 
+### `traffic_get_queues`
+Inputs: area filter (optional, radius ≤10000), `limit` (≤200, default 20).
+
+Output: `drivingVehicles`, `stoppedVehicles` (under 0.5 m/s), `byType` (total/stopped), `stoppedWaitingFor` (the game's car AI `Blocker` type: Continuing, Signal, Crossing, Oncoming, Spawn, None), `destinations`, `queues[]` (where each queue's head vehicle is held up, with `vehiclesQueued`, `queueHeads`, `headWaitingFor`) and `deadlocks[]` (loops of vehicles blocking each other). It shows the cause behind the flow figures from `traffic_find_bottlenecks`.
+
+## City telemetry
+
+### `city_get_notifications`
+Inputs: area filter (optional), `type` (case-insensitive substring of the icon prefab name), `offset`, `limit` (≤1000, default 100).
+
+Output: `notifications[]` (`type`, `priority`, `position`, `target` with `kind` and `prefab`), `countsByType` for the filtered set, `iconsInCity`, and paging fields. These are the in-world warning icons, for example the commercial "not enough customers" icon.
+
+### `city_get_statistics`
+Inputs: none, which lists every recorded series with its current value; or `type` (a `StatisticType` name such as `Population`, `Unemployed`, `ServiceCount`, `PassengerCountBus`), `parameter` (resource index for Service*/Processing*/Office* series; listed by the no-type call) and `samples` (1–512, default 64).
+
+Output: `current`, `recorded`, `totalSamples`, `frames[]`, `values[]`, and `resource` for per-resource series. The game keeps 32 samples per in-game day.
+
+## Transit
+
+### `transit_get_lines`
+Inputs: `type` (`bus`, `tram`, `train`, `metro`, `ship`, `airplane`, ...), `includeStops`, `offset`, `limit` (≤200, default 50).
+
+Output: `lines[]` with `name`, `number`, `type`, `color`, `active`, `schedule`, `stops`, `vehicles`, `passengersOnBoard`, `usage` (on board ÷ capacity), `lengthMetres`, `waitingPassengers`, and with `includeStops`, a `stopList[]` holding the waiting passengers at each stop. The figures come from `TransportUIUtils.BuildTransportLine`, the helper the game's transportation panel uses.
+
+The data sources and the queue-head approach for these four commands follow LancerComet/cities-skylines-2-mcp (Apache-2.0).
+
 ## Analysis
 
 ### `city_analyze`

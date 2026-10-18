@@ -20,8 +20,26 @@ static class TelemetryTests
     public static int Run()
     {
         passed = 0;
-        Traffic(); Buildings(); Recommendations(); Rules(); RoadBuilder(); Registry();
+        Traffic(); Queues(); Buildings(); Recommendations(); Rules(); RoadBuilder(); Registry();
         return passed;
+    }
+
+    static void Queues()
+    {
+        // 0 <- 1 <- 2 (2 waits behind 1, 1 behind 0); 0 is stopped at a light, so 0 heads all three.
+        var loops = new List<List<int>>();
+        var h = QueueMath.ResolveHeads(new[] { -1, 0, 1 }, new[] { true, true, true }, loops);
+        Check(h.SequenceEqual(new[] { 0, 0, 0 }) && loops.Count == 0, "queue chain resolves to its head");
+        // A stopped car behind a moving car is its own head; moving cars get -1.
+        h = QueueMath.ResolveHeads(new[] { -1, 0 }, new[] { false, true }, loops);
+        Check(h[0] == -1 && h[1] == 1, "moving blocker ends the queue");
+        // 0 -> 1 -> 2 -> 0 is a gridlock loop; 3 queues behind the loop.
+        loops.Clear();
+        h = QueueMath.ResolveHeads(new[] { 1, 2, 0, 2 }, new[] { true, true, true, true }, loops);
+        Check(loops.Count == 1 && loops[0].Count == 3 && h.All(x => x == -2), "deadlock loop detected with its tail");
+        // Out-of-range blocker indices are treated as no blocker.
+        h = QueueMath.ResolveHeads(new[] { 9 }, new[] { true }, new List<List<int>>());
+        Check(h[0] == 0, "invalid blocker index is ignored");
     }
 
     static void Traffic()
