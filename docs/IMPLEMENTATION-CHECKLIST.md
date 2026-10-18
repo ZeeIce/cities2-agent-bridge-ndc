@@ -16,6 +16,12 @@ A level is claimed only with evidence. Levels 5–6 require the rebuilt DLL to b
 
 **Live run 3 (traffic controls, authorised apply-and-undo):** every apply was refused at preview by an over-strict neighbourhood whitelist (the game regenerates neighbouring geometry). No change occurred, the junction's 16 movements were identical before and after, and a checkpoint had been saved. Fixed by enforcing the real property: nothing deleted, no new network, and no Upgraded change except on the target.
 
+**Live run 5 (2026-10-18, Fort Johnson, population 30,076, paused, controls off):** all 14 calls returned the expected result.
+- `city_get_notifications`: 10 icons (6 No Customers on low-density commercial, 3 Traffic Bottleneck, 1 Powerline Not Connected). The `customer` filter returned 6. Bottleneck icons belong to a lane entity, so their `target.kind` is `other`.
+- `city_get_statistics`: 389 recorded series, 278 samples each. Population, Unemployed and PassengerCountBus histories read. ServiceCount[2] resolved to ConvenienceFood. An unknown type returned the list of valid names.
+- `traffic_get_queues`: 687 driving and 173 stopped (138 Continuing, 14 Signal, 5 Crossing, 16 None), no deadlocks. Largest queue: 66 vehicles on a Medium Road at (4176, -4441). The area filter worked.
+- `transit_get_lines`: the 3 bus lines matched the panel (6/6/10 stops; 5/6/12 vehicles). Per-stop waiting passengers were read and the tram filter returned 0. `name` is the prefab name (`Bus Line Tool`) for lines without a custom name.
+
 **Live run 4 (fixed DLL, quiet local 4-way in the east district):**
 - Previews predicted the flags correctly (`AllWayStop`, `TrafficLights`, right-side `ForbidLeftTurn`) with no city change.
 - All-way stop applied: all 16 movements gained `Stop`. `default` removed it and restored all 16 exactly.
@@ -41,7 +47,10 @@ A level is claimed only with evidence. Levels 5–6 require the rebuilt DLL to b
 | Traffic mod read adapter | ✔ | ✔ | — | types checked by reflection offline | ✔ run 1 | ✔ run 1 | |
 | Road Builder list/get/validate | ✔ | ✔ | ✔ (all 51 installed configs parse) | — | list ✔ run 1 | list ✔ run 1 | |
 | `traffic_set_intersection_control` / `traffic_set_turn_restriction` | ✔ | ✔ | — | ✔ (PlaceableNetData, Temp, leftHandTraffic) | ✔ run 4 | ✔ run 4 | Native upgrade tool; logic follows decompiled NetToolSystem.CreatePath/AddControlPoints |
-| Registry consistency (68 commands) | ✔ | ✔ | ✔ | ✔ | — | — | |
+| `city_get_notifications` / `city_get_statistics` | ✔ | ✔ | — | ✔ (Icon, CityStatisticsSystem API by decompile) | ✔ run 5 | ✔ run 5 | Adapted from LancerComet/cities-skylines-2-mcp (Apache-2.0) |
+| `traffic_get_queues` | ✔ | ✔ | queue logic ✔ | ✔ (Blocker) | ✔ run 5 | ✔ run 5 | Queue heads and deadlock loops; same source |
+| `transit_get_lines` | ✔ | ✔ | — | ✔ (TransportUIUtils.BuildTransportLine) | ✔ run 5 | ✔ run 5 | Same source |
+| Registry consistency (74 commands) | ✔ | ✔ | ✔ | ✔ | — | — | |
 | Install discovery (`find-game.ps1`) | ✔ | — | manual ✔ | — | — | — | Resolved `C:\Games\Cities - Skylines II` from `Player.log` |
 
 ## Blockers and deferred work (with evidence)
