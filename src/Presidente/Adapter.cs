@@ -41,7 +41,13 @@ namespace PresidenteBridge
             if (assembly != found)
             {
                 assembly = found;
-                using (var sha = SHA256.Create()) using (var stream = File.OpenRead(found.Location)) hash = BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "");
+                // The game loads mods from memory, so Assembly.Location is empty; ask the mod manager for the file it loaded.
+                var path = found.Location;
+                if (string.IsNullOrEmpty(path))
+                    foreach (var info in Game.SceneFlow.GameManager.instance.modManager)
+                        if (info.asset != null && info.asset.assembly == found) { path = info.asset.path; break; }
+                if (string.IsNullOrEmpty(path) || !File.Exists(path)) throw new InvalidOperationException("presidente_assembly_path_unknown");
+                using (var sha = SHA256.Create()) using (var stream = File.OpenRead(path)) hash = BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "");
             }
             if (hash != SupportedHash) throw new InvalidOperationException("unsupported_presidente_build: " + hash);
         }
