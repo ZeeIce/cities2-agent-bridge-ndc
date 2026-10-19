@@ -41,7 +41,8 @@ namespace CitiesIIAgentBridge
             var m = UiType.GetMethod(method, Any, null, new[] { typeof(string) }, null) ?? throw new InvalidOperationException("tte_method_missing: " + method);
             return (string)m.Invoke(Ui, new object[] { payload is string s ? s : JsonConvert.SerializeObject(payload) });
         }
-        public Entity Selected => (Entity)UiType.GetField("m_SelectedEntity", Any).GetValue(Ui);
+        // A property in current TTE (public get, private set); fall back to a field for other versions.
+        public Entity Selected => (Entity)(Member(Ui, "m_SelectedEntity") ?? Entity.Null);
         public void Select(Entity e)
         {
             var m = UiType.GetMethod("ChangeSelectedEntity", Any);
@@ -55,7 +56,7 @@ namespace CitiesIIAgentBridge
         public List<JObject> EdgeInfo(Entity node)
         {
             UiType.GetMethod("UpdateEdgeInfo", Any).Invoke(Ui, new object[] { node });
-            var dict = (IDictionary)UiType.GetField("m_EdgeInfoDictionary", Any).GetValue(Ui);
+            var dict = (IDictionary)Member(Ui, "m_EdgeInfoDictionary");
             var rows = new List<JObject>();
             if (!dict.Contains(node)) return rows;
             foreach (var info in (IEnumerable)dict[node])
