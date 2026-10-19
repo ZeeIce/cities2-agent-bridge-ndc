@@ -144,6 +144,8 @@ namespace CitiesIIAgentBridge
                 throw new InvalidOperationException("control_disabled: enable it in Options > Cities II Agent Bridge");
         }
 
+        private PresidenteBridge.Adapter presidente;
+
         private JObject Dispatch(string command, JObject args)
         {
             // These status polls must not terminate an active bounded simulation step.
@@ -189,6 +191,7 @@ namespace CitiesIIAgentBridge
                     ["traffic"] = new JArray("traffic_get_network", "traffic_get_intersection", "traffic_get_lane_rules", "traffic_find_bottlenecks", "traffic_analyze", "traffic_get_queues", "traffic_get_game_bottlenecks"),
                     ["cityTelemetry"] = new JArray("city_get_notifications", "city_get_statistics", "city_get_map_layer", "city_capture_view", "city_get_finances", "city_get_utilities", "city_get_policies"),
                     ["transit"] = new JArray("transit_get_lines"),
+                    ["presidente"] = new JArray("get_presidente_systems", "inspect_presidente_system", "get_presidente_catalog", "get_presidente_state", "preview_presidente_action", "execute_presidente_action", "get_presidente_operation"),
                     ["trafficToolEssentials"] = new JArray("tte_list_junctions", "tte_get_junction", "tte_configure_junction", "tte_set_pattern", "tte_create_sync_group", "tte_set_sync"),
                     ["analysis"] = new JArray("city_get_zoning_summary", "city_analyze"),
                     ["integrations"] = new JArray("integrations_status", "roadbuilder_list_configs", "roadbuilder_get_config", "roadbuilder_validate_config"),
@@ -213,6 +216,15 @@ namespace CitiesIIAgentBridge
                 case "city_get_statistics": return CityGetStatistics(args);
                 case "transit_get_lines": return TransitGetLines(args);
                 case "traffic_get_game_bottlenecks": return TrafficGetGameBottlenecks(args);
+                case "get_presidente_systems":
+                case "inspect_presidente_system":
+                case "get_presidente_catalog":
+                case "get_presidente_state":
+                case "preview_presidente_action":
+                case "execute_presidente_action":
+                case "get_presidente_operation":
+                    // Presidente (HomelandSecurity) adapter by reflection over its UI bindings; pinned to one reviewed build.
+                    return (presidente ?? (presidente = new PresidenteBridge.Adapter())).Dispatch(command, args, RequireCity(), citySession, RequireControl);
                 case "tte_list_junctions": return TteListJunctions(args);
                 case "tte_get_junction": return TteGetJunction(args);
                 case "tte_configure_junction": return TteConfigureJunction(args);

@@ -24,7 +24,7 @@ foreach ($reference in $references) {
     if (!(Test-Path -LiteralPath $path)) { throw "Missing reference: $path" }
     $response += '/reference:"' + $path + '"'
 }
-Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'src') -Filter '*.cs' | ForEach-Object { $response += '"' + $_.FullName + '"' }
+Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'src') -Filter '*.cs' -Recurse | ForEach-Object { $response += '"' + $_.FullName + '"' }
 $rsp = Join-Path $out 'compile.rsp'
 [IO.File]::WriteAllLines($rsp, $response)
 & dotnet $compiler ('@' + $rsp)
