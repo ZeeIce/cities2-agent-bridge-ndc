@@ -189,6 +189,7 @@ namespace CitiesIIAgentBridge
                     ["traffic"] = new JArray("traffic_get_network", "traffic_get_intersection", "traffic_get_lane_rules", "traffic_find_bottlenecks", "traffic_analyze", "traffic_get_queues", "traffic_get_game_bottlenecks"),
                     ["cityTelemetry"] = new JArray("city_get_notifications", "city_get_statistics", "city_get_map_layer", "city_capture_view", "city_get_finances", "city_get_utilities", "city_get_policies"),
                     ["transit"] = new JArray("transit_get_lines"),
+                    ["trafficToolEssentials"] = new JArray("tte_list_junctions", "tte_get_junction", "tte_configure_junction", "tte_set_pattern", "tte_create_sync_group", "tte_set_sync"),
                     ["analysis"] = new JArray("city_get_zoning_summary", "city_analyze"),
                     ["integrations"] = new JArray("integrations_status", "roadbuilder_list_configs", "roadbuilder_get_config", "roadbuilder_validate_config"),
                     ["planning"] = new JArray("get_district_atlas","get_city_map","get_city_diagnostics","find_building_sites","preview_building","plan_neighborhood","execute_neighborhood","get_neighborhood_plan"),
@@ -212,6 +213,12 @@ namespace CitiesIIAgentBridge
                 case "city_get_statistics": return CityGetStatistics(args);
                 case "transit_get_lines": return TransitGetLines(args);
                 case "traffic_get_game_bottlenecks": return TrafficGetGameBottlenecks(args);
+                case "tte_list_junctions": return TteListJunctions(args);
+                case "tte_get_junction": return TteGetJunction(args);
+                case "tte_configure_junction": return TteConfigureJunction(args);
+                case "tte_set_pattern": return TteSetPattern(args);
+                case "tte_create_sync_group": return TteCreateSyncGroup(args);
+                case "tte_set_sync": return TteSetSync(args);
                 case "city_get_map_layer": return CityGetMapLayer(args);
                 case "city_capture_view": return CityCaptureView(args);
                 case "city_get_finances": return CityGetFinances();

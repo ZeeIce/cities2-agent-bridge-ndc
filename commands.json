@@ -77,6 +77,12 @@
   "traffic_set_intersection_control",
   "traffic_set_turn_restriction",
   "transit_get_lines",
+  "tte_configure_junction",
+  "tte_create_sync_group",
+  "tte_get_junction",
+  "tte_list_junctions",
+  "tte_set_pattern",
+  "tte_set_sync",
   "upgrade_network",
   "zone_rectangle"
 ]
