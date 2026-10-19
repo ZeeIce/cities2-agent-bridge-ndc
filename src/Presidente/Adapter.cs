@@ -187,7 +187,10 @@ namespace PresidenteBridge
         }
         JObject Inspect(string command, JObject args, World world)
         {
-            var systems = world.Systems.Where(s => s.GetType().Assembly == assembly).OrderBy(s => s.GetType().FullName).ToArray();
+            // world.Systems is a NoAllocReadOnlyCollection that throws when used as IEnumerable<T>; copy with foreach first.
+            var all = new List<ComponentSystemBase>();
+            foreach (var s in world.Systems) all.Add(s);
+            var systems = all.Where(s => s.GetType().Assembly == assembly).OrderBy(s => s.GetType().FullName).ToArray();
             if (command == "get_presidente_systems") return Page(new JArray(systems.Select(s => new JObject { ["system"] = s.GetType().FullName, ["enabled"] = s.Enabled })), args);
             var name = Required(args, "system");
             var system = systems.FirstOrDefault(s => s.GetType().FullName == name);
