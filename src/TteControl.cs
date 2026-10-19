@@ -276,14 +276,84 @@ namespace CitiesIIAgentBridge
                     tte.Call("CallUpdateCustomPhaseData", new { index = p, key = "MaximumDuration", value = (double)max });
                     tte.Call("CallUpdateCustomPhaseData", new { index = p, key = "MinimumDuration", value = (double)min });
                 }
+                var trace = new JArray();
                 tte.Call("CallUpdateEdgeGroupMask", new JArray(masks.Values).ToString(Formatting.None));
+                trace.Add(new JObject { ["step"] = "ui_update_edge_group_mask", ["buffer"] = MaskSnapshot(em, tte, node) });
+                // TTE's handler builds entries for edges it has not seen yet from an empty template, which drops
+                // the edge reference and position (CallUpdateEdgeGroupMask: new EdgeGroupMask(result, value) with
+                // result = default). Write any missing or different approach masks directly.
+                if (!MasksMatch(em, tte, node, masks.Values))
+                {
+                    WriteMasks(em, tte, node, masks.Values);
+                    tte.UiType.GetMethod("UpdateEntity", TteAny).Invoke(tte.Ui, new object[] { true, true });
+                    trace.Add(new JObject { ["step"] = "direct_write", ["buffer"] = MaskSnapshot(em, tte, node) });
+                }
                 tte.Call("CallSetPhaseMode", new { useSequentialPhases = true });
                 tte.Call("CallMainPanelSave", "");
+                trace.Add(new JObject { ["step"] = "saved", ["buffer"] = MaskSnapshot(em, tte, node) });
                 var after = TteJunctionJson(w, tte, node);
+                after["trace"] = trace;
                 after["status"] = ((JArray)after["unserved"]).Count == 0 || allowUnserved ? "complete" : "complete_with_unserved_turns";
                 return after;
             }
             finally { tte.Select(Entity.Null); tte.HidePanel(); }
+        }
+
+        private static readonly BindingFlags TteAny = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+
+        private static JArray MaskSnapshot(EntityManager em, TteBridge tte, Entity node) =>
+            new JArray(tte.Buffer(em, node, tte.MaskType).Select(m => { var j = JObject.FromObject(m); return new JObject { ["edge"] = j["m_Edge"], ["car"] = j["m_Car"] }; }));
+
+        private static bool MasksMatch(EntityManager em, TteBridge tte, Entity node, IEnumerable<JObject> wanted)
+        {
+            var have = tte.Buffer(em, node, tte.MaskType).Select(m => JObject.FromObject(m)).ToList();
+            foreach (var want in wanted)
+            {
+                var h = have.FirstOrDefault(m => (int)m["m_Edge"]["Index"] == (int)want["m_Edge"]["Index"] && (int)m["m_Edge"]["Version"] == (int)want["m_Edge"]["Version"]);
+                if (h == null) return false;
+                foreach (var g in new[] { "m_Car", "m_PublicCar", "m_PedestrianStopLine" })
+                    if (!JToken.DeepEquals(h[g], want[g])) return false;
+            }
+            return true;
+        }
+
+        // Replace the approach masks with fully formed entries (edge, TTE's approach position, turn masks).
+        private static void WriteMasks(EntityManager em, TteBridge tte, Entity node, IEnumerable<JObject> wanted)
+        {
+            var t = tte.MaskType;
+            var buffer = typeof(EntityManager).GetMethods().First(m => m.Name == "GetBuffer" && m.IsGenericMethod && m.GetParameters().Length == 2)
+                .MakeGenericMethod(t).Invoke(em, new object[] { node, false });
+            var bt = buffer.GetType();
+            bt.GetMethod("Clear").Invoke(buffer, null);
+            var ctor = t.GetConstructor(new[] { typeof(Entity), typeof(float3) }) ?? throw new InvalidOperationException("tte_edge_group_mask_ctor_changed");
+            foreach (var want in wanted)
+            {
+                var edge = new Entity { Index = (int)want["m_Edge"]["Index"], Version = (int)want["m_Edge"]["Version"] };
+                var p = want["m_Position"]; var pos = new float3((float)p["x"], (float)p["y"], (float)p["z"]);
+                object mask = ctor.Invoke(new object[] { edge, pos });
+                foreach (var g in new[] { "m_Car", "m_PublicCar", "m_Track" })
+                {
+                    var gf = t.GetField(g); object turn = gf.GetValue(mask);
+                    foreach (var tf in TurnFields)
+                    {
+                        var sf = turn.GetType().GetField(tf); object sig = sf.GetValue(turn);
+                        SetSignal(sig, want[g][tf]); sf.SetValue(turn, sig);
+                    }
+                    gf.SetValue(mask, turn);
+                }
+                foreach (var g in new[] { "m_PedestrianStopLine", "m_PedestrianNonStopLine", "m_Bicycle" })
+                {
+                    var gf = t.GetField(g); object sig = gf.GetValue(mask); SetSignal(sig, want[g]); gf.SetValue(mask, sig);
+                }
+                bt.GetMethod("Add").Invoke(buffer, new[] { mask });
+            }
+        }
+
+        private static void SetSignal(object sig, JToken value)
+        {
+            var st = sig.GetType();
+            st.GetField("m_GoGroupMask").SetValue(sig, (ushort)(int)value["m_GoGroupMask"]);
+            st.GetField("m_YieldGroupMask").SetValue(sig, (ushort)(int)value["m_YieldGroupMask"]);
         }
 
         private static JObject Sig() => new JObject { ["m_GoGroupMask"] = 0, ["m_YieldGroupMask"] = 0 };
