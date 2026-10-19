@@ -198,3 +198,18 @@ The ban is stored on the edge side that corresponds to the chosen end: start →
 ```json
 {"command":"traffic_set_turn_restriction","args":{"edgeIndex":212264,"edgeVersion":1,"nodeIndex":199995,"nodeVersion":1,"movement":"left","forbid":true,"previewOnly":true}}
 ```
+
+## Traffic Tool Essentials (mutating except list/get; require bridge controls)
+
+TTE has no public API. These commands call the same handlers TTE's own panel uses (`UISystem.Call*`), resolved by reflection, so the bridge has no compile-time dependency on TTE.
+
+| Command | Inputs | Notes |
+|---|---|---|
+| `tte_list_junctions` | area filter | Pattern, phase count, sync group and offset for every TTE-managed junction. Flags `custom_pattern_without_phases`. |
+| `tte_get_junction` | `index`, `version` | Phases (min/max durations), each approach (`bearingDegrees`, lane counts per turn, go/yield phases per turn) and `unserved` turns. |
+| `tte_configure_junction` | `index`, `version`, `phases[{minDuration, maxDuration, movements[{edgeIndex, edgeVersion, go[], yield[], pedestrians}]}]`, `previewOnly`, `allowUnserved` | Replaces the phase plan and sets sequential mode. It refuses plans that leave an approach turn without green in any phase. It checks the stored masks and writes them directly if TTE's handler dropped the edge reference. Returns a `trace`. |
+| `tte_set_pattern` | `index`, `version`, `pattern` (`vanilla`, `split_phasing`, `protected_left_turns`, `custom`) | Use `vanilla` to revert. |
+| `tte_create_sync_group` | `name`, `baseCycleSeconds` | Green-wave group. |
+| `tte_set_sync` | `index`, `version`, `groupId`, `offsetSeconds` | Requires custom phases. Offset = seconds after the reference junction's phase-1 start. |
+
+Green-wave timing (decompiled `SyncGroupSystem`): each phase lasts `minDuration + 1 + 4` ticks, and 1 tick = 64 simulation frames.

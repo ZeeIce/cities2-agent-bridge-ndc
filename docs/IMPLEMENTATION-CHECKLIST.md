@@ -16,6 +16,8 @@ A level is claimed only with evidence. Levels 5–6 require the rebuilt DLL to b
 
 **Live run 3 (traffic controls, authorised apply-and-undo):** every apply was refused at preview by an over-strict neighbourhood whitelist (the game regenerates neighbouring geometry). No change occurred, the junction's 16 movements were identical before and after, and a checkpoint had been saved. Fixed by enforcing the real property: nothing deleted, no new network, and no Upgraded change except on the target.
 
+**Live run 7 (2026-10-19, TTE green wave):** the first build failed to select junctions (`m_SelectedEntity` is a property), and the second stored no masks, so it was reverted by its own readback check. The third run configured 20 junctions (15 on Cornflower, 5 on Linden) with 2 phases each (43/43 and 27/27, an 80 s cycle), every approach served. All 20 joined sync group 2 with the computed offsets, verified on readback. TTE's own handler path stored the masks, so the direct-write fallback was not needed.
+
 **Live run 6 (2026-10-18, Fort Johnson, paused, controls off):** every new call returned a result.
 - Fixes confirmed: bottleneck icons resolve to `road`/`junction` with `via` lane. Lines read `Bus line 1-3` and stops read `127 Linden Street`, etc.
 - `traffic_get_game_bottlenecks`: city flow 61%, volume 97 over 364 roads, and 7 marked bottleneck lanes, the worst being a Small Road at (4177, -4521) with 14% flow.
